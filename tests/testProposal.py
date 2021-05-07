@@ -34,8 +34,13 @@ class SafeMultisigWallet(ts4.BaseContract):
         )
         self.call_method_signed('sendTransaction', params)
 
+class Helper(ts4.BaseContract):
 
-
+    def __init__(self):
+        super(Helper, self).__init__(
+            'Helper', {}, nickname = 'helper'
+        )
+        
 print("==================== Initialization ====================")
 
 # Load some ABI beforehand to dismiss 'Unknown message' warnings
@@ -44,7 +49,7 @@ ts4.register_abi('TONTokenWallet')
 ts4.register_abi('RootTokenContract')
 ts4.register_abi('Proposal')
 
-helper  = ts4.BaseContract('Helper', {}, nickname = 'helper')
+helper = Helper()
 
 smcTestRoot = ts4.BaseContract('TestRoot', {}, nickname = 'TestRoot')
 
