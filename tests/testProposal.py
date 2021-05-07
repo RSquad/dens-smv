@@ -11,6 +11,20 @@ ts4.G_WARN_ON_UNEXPECTED_ANSWERS = True
 
 assert eq('0.2.1', ts4.__version__)
 
+class SafeMultisigWallet(ts4.BaseContract):
+
+    def __init__(self, helper):
+        self.create_keypair()
+        super(SafeMultisigWallet, self).__init__(
+            'SafeMultisigWallet',
+            ctor_params = dict(
+                reqConfirms = 0,
+                owners      = [self.public_key_],
+            ),
+            nickname    = 'wallet',
+        )
+
+
 print("==================== Initialization ====================")
 
 # Load some ABI beforehand to dismiss 'Unknown message' warnings
@@ -23,16 +37,8 @@ helper  = ts4.BaseContract('Helper', {}, nickname = 'helper')
 
 smcTestRoot = ts4.BaseContract('TestRoot', {}, nickname = 'TestRoot')
 
-(private_key, public_key) = ts4.make_keypair()
-smcSafeMultisigWallet = ts4.BaseContract('SafeMultisigWallet',
-        ctor_params = dict(
-            reqConfirms = 0,
-            owners      = [public_key],
-        ),
-        pubkey      = public_key,
-        private_key = private_key,
-        nickname     = 'wallet',
-    )
+smcSafeMultisigWallet = SafeMultisigWallet(helper)
+(private_key, public_key) = smcSafeMultisigWallet.keypair()
 
 print("> deploy and init DemiurgeStore")
 smcDemiurgeStore = ts4.BaseContract('DemiurgeStore', {}, nickname = 'demiurgeStore')
