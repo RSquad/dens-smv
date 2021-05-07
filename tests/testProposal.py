@@ -54,6 +54,9 @@ ts4.register_abi('TONTokenWallet')
 ts4.register_abi('RootTokenContract')
 ts4.register_abi('Proposal')
 
+now = int(time.time())
+ts4.core.set_now(now)
+
 helper = Helper()
 
 smcTestRoot = ts4.BaseContract('TestRoot', {}, nickname = 'TestRoot')
@@ -76,7 +79,7 @@ smcDemiurgeStore.call_method('setDemiurgeImage', {'image': demiurgeImage})
 smcDemiurgeStore.call_method('setProposalImage', {'image': proposalImage})
 smcDemiurgeStore.call_method('setPadawanImage',  {'image': padawanImage})
 
-ts4.dispatch_messages()
+ts4.ensure_queue_empty()
 
 
 
@@ -100,7 +103,8 @@ ts4.dispatch_messages()
 print("==================== deploy and init Demiurge ==================== ")
 print(smcDemiurgeStore.addr())
 
-demiurge = ts4.BaseContract('Demiurge',  ctor_params = None,
+demiurge = ts4.BaseContract('Demiurge',
+        ctor_params = None,
         pubkey      = public_key,
         private_key = private_key,
         nickname     = 'demiurge',
@@ -112,6 +116,7 @@ demiurge.call_method('constructor', dict(
       tokenRoot = smcRT.addr()
 ), private_key = private_key)
 
+# Disalbe verbosity to cleanup long output
 ts4.set_verbose(False)
 ts4.dispatch_messages()
 ts4.set_verbose(True)
@@ -125,8 +130,6 @@ assert eq(proposalImage, images['proposal'])
 
 print("==================== deploy and init tip3 ====================")
 
-
-
 walletAddress = smcRT.call_method('deployWallet', {
       '_answer_id': 1,
       'workchain_id': 0,
@@ -134,22 +137,23 @@ walletAddress = smcRT.call_method('deployWallet', {
       'internal_owner': 0,
       'tokens': 21000000,
       'grams': 5*ts4.GRAM,
-    },private_key=private_key )
+    }, private_key=private_key)
+
 ts4.dispatch_messages()
 
 smcTTWUser = ts4.BaseContract('TONTokenWallet', None, address=walletAddress,
-        pubkey = public_key,
+        pubkey      = public_key,
         private_key = private_key,
-        nickname = 'TokenWallet',
+        nickname    = 'TokenWallet',
     )
 
 print("==================== deploy and init Padawan ====================")
 
 ## Encode payload
 payload = helper.call_getter('encode_deployPadawan_call', dict(pubkey = public_key))
-ts4.dispatch_messages()
+ts4.ensure_queue_empty()
 
-print(ts4.get_balance(smcSafeMultisigWallet.addr()))
+smcSafeMultisigWallet.ensure_balance(100*ts4.GRAM)
 
 smcSafeMultisigWallet.sendTransaction(demiurge, payload)
 
@@ -206,8 +210,8 @@ ts4.dispatch_messages()
 
 print("==================== deploy and init Valid Date Proposal ====================")
 
-proposalVotingStart = int(time.time()) + 10
-proposalVotingEnds = int(time.time())  + 7 * DAY + 2 + 10
+proposalVotingStart = now + 10
+proposalVotingEnds  = now + 7 * DAY + 2 + 10
 
 payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_call',  {
         'start': proposalVotingStart,
@@ -215,23 +219,30 @@ payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_
         'title': '74657374',
         'specific': {
           'name': '74657374',
-          'ts': int(time.time()),
+          'ts': now,
         },
 })
 
 smcSafeMultisigWallet.sendTransaction(demiurge, payloadDeployReserveProposal)
 ts4.dispatch_one_message()
 msg = ts4.peek_msg()
+assert msg.is_call('constructor')
 proposalAddress = msg.dst
 ts4.dispatch_messages()
 
 proposal = ts4.BaseContract('Proposal', None, address=proposalAddress)
 
-assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': 0, 'votesAgainst': 0})
-print("==================== getProposalData ====================")
-print(proposal.call_getter('getProposalData',{}))
+def getCurrentVotes(proposal):
+    res = proposal.call_getter('getCurrentVotes', decode = True)
+    return res.votesFor, res.votesAgainst
 
-print(demiurge.call_getter_raw('getDeployed',{}))
+assert eq((0,0), getCurrentVotes(proposal))
+
+print("==================== getProposalData ====================")
+
+# print(proposal.call_getter('getProposalData'))
+ts4.dump_struct(proposal.call_getter_raw('getProposalData'))
+ts4.dump_struct(demiurge.call_getter_raw('getDeployed'))
 
 print("==================== VoteFor Proposal ====================")
 
@@ -263,7 +274,8 @@ payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)    
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
-assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'votesAgainst': 0})
+
+assert eq((votesFor, 0), getCurrentVotes(proposal))
 
 ##vote again
 votesMore = 9999
@@ -272,11 +284,10 @@ payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesMore)
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
 
-assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor+votesMore, 'votesAgainst': 0})
+assert eq((votesFor + votesMore, 0), getCurrentVotes(proposal))
 
 # TODO check votes after vote period
 
-now = int(time.time())
 ts4.core.set_now(now + 8*DAY)
 print(proposal.call_getter('getProposalData',{}))
 
