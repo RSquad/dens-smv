@@ -23,10 +23,17 @@ class SafeMultisigWallet(ts4.BaseContract):
             ),
             nickname    = 'wallet',
         )
-        
-    def sendTransaction(self, params):
+
+    def sendTransaction(self, dest, payload):
+        params = dict(
+            dest    = dest.addr(),
+            value   = 5_000_000_000,
+            bounce  = True,
+            flags   = 3,
+            payload = payload,
+        )
         self.call_method_signed('sendTransaction', params)
-    
+
 
 
 print("==================== Initialization ====================")
@@ -132,16 +139,9 @@ print("==================== deploy and init Padawan ====================")
 payload = helper.call_getter('encode_deployPadawan_call', dict(pubkey = public_key))
 ts4.dispatch_messages()
 
-params = dict(
-        dest = demiurge.addr(),
-        value = 15_500_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payload
-    )
 print(ts4.get_balance(smcSafeMultisigWallet.addr()))
 
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(demiurge, payload)
 
 ts4.dispatch_messages()
 
@@ -189,15 +189,7 @@ payloadDepositTokens =  helper.call_getter('encode_depositTokens_call', dict(
     tokenId = smcRT.addr().str().replace('0:', '0x'),
     tokens = TOKEN_DEPOSIT))
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = True,
-        flags = 3,
-        payload = payloadDepositTokens,
-    )
-
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadDepositTokens)
 
 ts4.dispatch_messages()
 
@@ -217,15 +209,7 @@ payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_
         },
 })
 
-params = dict(
-        dest = demiurge.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadDeployReserveProposal
-    )
-
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(demiurge, payloadDeployReserveProposal)
 ts4.dispatch_one_message()
 msg = ts4.peek_msg()
 proposalAddress = msg.dst
@@ -258,16 +242,9 @@ payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
     'votes': votesFor
 })
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 
-smcSafeMultisigWallet.sendTransaction(params)
-#TODO accert VoteRejected
+#TODO accept VoteRejected
 ts4.dispatch_messages()
 
 
@@ -282,15 +259,7 @@ payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
     'votes': votesFor
 })
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
-
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'votesAgainst': 0})
 
@@ -302,15 +271,7 @@ payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
     'votes': votesMore
 })
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
-
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
 
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor+votesMore, 'votesAgainst': 0})
@@ -324,20 +285,12 @@ print(proposal.call_getter('getProposalData',{}))
 
 payloadWrap = helper.call_getter('encode_wrapUp_call', {})
 
-params = dict(
-        dest = proposal.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadWrap
-    )
-
-smcSafeMultisigWallet.sendTransaction(params)
+smcSafeMultisigWallet.sendTransaction(proposal, payloadWrap)
 ts4.dispatch_messages()
 
 
-print(proposal.call_getter('getCurrentVotes',{}))
-print(proposal.call_getter('getVotingResults',{}))
+print(proposal.call_getter('getCurrentVotes',  {}))
+print(proposal.call_getter('getVotingResults', {}))
 
 
 
