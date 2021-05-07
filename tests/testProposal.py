@@ -1,6 +1,10 @@
 import tonos_ts4.ts4 as ts4, json
+from datetime import datetime
+import time
+
 eq = ts4.eq
-bt = 1000000
+DAY = 86400
+
 
 ts4.init('../build/', verbose = True)
 ts4.G_WARN_ON_UNEXPECTED_ANSWERS = True
@@ -13,7 +17,7 @@ print("==================== Initialization ====================")
 ts4.register_abi('Padawan')
 ts4.register_abi('TONTokenWallet')
 ts4.register_abi('RootTokenContract')
-# ts4.register_abi('Proposal')
+ts4.register_abi('Proposal')
 
 helper  = ts4.BaseContract('Helper', {}, nickname = 'helper')
 
@@ -155,7 +159,6 @@ smcPadawan.ensure_balance((5-2)*ts4.GRAM)
 
 TTWAddr = smcPadawan.call_getter_raw('getTokenAccounts')['allAccounts'][smcRT.addr().str()]['addr']
 TTWAddr = ts4.Address(TTWAddr)
-print(TTWAddr)
 
 smcTTWPadawan = ts4.BaseContract('TONTokenWallet', None, address=TTWAddr, pubkey = public_key,
         private_key = private_key)
@@ -193,16 +196,18 @@ ts4.dispatch_one_message()
 ts4.dispatch_messages()
 
 
-print("==================== deploy and init Proposal ====================")
+print("==================== deploy and init Valid Date Proposal ====================")
 
+proposalVotingStart = int(time.time()) + 10
+proposalVotingEnds = int(time.time())  + 7 * DAY + 2 + 10
 
 payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_call',  {
-        'start': 15457300 + 5,
-        'end': 1545730 + 180 + 60 * 60 * 7,
+        'start': proposalVotingStart,
+        'end': proposalVotingEnds,
         'title': '74657374',
         'specific': {
           'name': '74657374',
-          'ts': 1545730,
+          'ts': int(time.time()),
         },
 })
 
@@ -215,5 +220,123 @@ params = dict(
     )
 
 smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+ts4.dispatch_one_message()
+msg = ts4.peek_msg()
+proposalAddress = msg.dst
+ts4.dispatch_messages()
 
-ts4.core.set_now(bt)
+proposal = ts4.BaseContract('Proposal', None, address=proposalAddress)
+
+assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': 0, 'votesAgainst': 0})
+print("==================== getProposalData ====================")
+print(proposal.call_getter('getProposalData',{}))
+
+print(demiurge.call_getter('getDeployed',{}))
+
+print("==================== VoteFor Proposal ====================")
+
+
+# No keys = Error Not a Owner
+smcPadawan.call_method('voteFor',{
+    'proposal': proposalAddress,
+    'choice': True,
+    'votes':1
+}, expect_ec = 113)
+
+
+## Vote before proposal starts
+votesFor = 20000
+payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
+    'proposal': proposalAddress,
+    'choice': True,
+    'votes': votesFor
+})
+
+params = dict(
+        dest = smcPadawan.addr(),
+        value = 5_000_000_000,
+        bounce = False,
+        flags = 3,
+        payload = payloadvoteFor
+    )
+
+smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+#TODO accert VoteRejected
+ts4.dispatch_messages()
+
+
+
+# Fast forward startDelay for start Voting period
+ts4.core.set_now(proposalVotingStart+1)
+
+votesFor = 20000
+payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
+    'proposal': proposalAddress,
+    'choice': True,
+    'votes': votesFor
+})
+
+params = dict(
+        dest = smcPadawan.addr(),
+        value = 5_000_000_000,
+        bounce = False,
+        flags = 3,
+        payload = payloadvoteFor
+    )
+
+smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+ts4.dispatch_messages()
+assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'votesAgainst': 0})
+
+##vote again 
+votesMore = 9999
+payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
+    'proposal': proposalAddress,
+    'choice': True,
+    'votes': votesMore
+})
+
+params = dict(
+        dest = smcPadawan.addr(),
+        value = 5_000_000_000,
+        bounce = False,
+        flags = 3,
+        payload = payloadvoteFor
+    )
+
+smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+ts4.dispatch_messages()
+
+assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor+votesMore, 'votesAgainst': 0})
+
+# TODO check votes after vote period 
+
+now = int(time.time())
+ts4.core.set_now(now + 8*DAY)
+print(proposal.call_getter('getProposalData',{}))
+
+
+payloadWrap = helper.call_getter('encode_wrapUp_call', {})
+
+params = dict(
+        dest = proposal.addr(),
+        value = 5_000_000_000,
+        bounce = False,
+        flags = 3,
+        payload = payloadWrap
+    )
+
+smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+ts4.dispatch_one_message()
+ts4.dispatch_one_message()
+ts4.dispatch_one_message()
+# ts4.core.set_trace(True)
+ts4.dispatch_one_message()
+ts4.dispatch_messages()
+
+
+print(proposal.call_getter('getCurrentVotes',{}))
+print(proposal.call_getter('getVotingResults',{}))
+
+
+

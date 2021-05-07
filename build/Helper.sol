@@ -15,6 +15,13 @@ interface IDemiurge {
     ) external;
 }
 
+
+interface IProposal {
+    function queryStatus() external;
+    function wrapUp() external;
+}
+
+
 interface IPadawan {
     function createTokenAccount(address tokenRoot) external;
     function voteFor(address proposal, bool choice, uint32 votes) external;
@@ -28,6 +35,11 @@ interface IPadawan {
 }
 
 contract Helper {
+
+    function encode_wrapUp_call() public pure returns (TvmCell) {
+        return tvm.encodeBody(IProposal.wrapUp);
+    }
+
     // Encode call to call_me() with a given parameter. Return resulting message body as a cell
     function encode_deployPadawan_call(uint pubkey) public pure returns (TvmCell) {
         return tvm.encodeBody(IDemiurge.deployPadawan, pubkey);
