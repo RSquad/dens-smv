@@ -45,6 +45,32 @@ class Helper(ts4.BaseContract):
         params = dict(proposal = addr, choice = choice, votes = votes)
         return self.call_getter('encode_voteFor_call', params)
 
+def load_image(name):
+    code = ts4.load_code_cell('../build/{}.tvc'.format(name))
+    return helper.call_getter('make_image_cell', dict(code = code))
+
+class DemiurgeStore(ts4.BaseContract):
+
+    def __init__(self):
+        # TODO: is that correct that DemiurgeStore has no owner's key?
+        super(DemiurgeStore, self).__init__('DemiurgeStore', {}, nickname = 'demiurgeStore')
+        self.demiurgeImage = load_image('Demiurge')
+        self.proposalImage = load_image('Proposal')
+        self.padawanImage  = load_image('Padawan')
+
+        self.call_method('setDemiurgeImage', {'image': self.demiurgeImage})
+        self.call_method('setProposalImage', {'image': self.proposalImage})
+        self.call_method('setPadawanImage',  {'image': self.padawanImage})
+
+        ts4.ensure_queue_empty()
+
+    def checkDemiurgeImages(self, demiurge):
+        images = demiurge.call_getter('getImages', {})
+
+        assert eq(['padawan', 'proposal'], list(images.keys()))
+        assert eq(self.padawanImage,  images['padawan'])
+        assert eq(self.proposalImage, images['proposal'])
+
 
 print("==================== Initialization ====================")
 
@@ -65,55 +91,41 @@ smcSafeMultisigWallet = SafeMultisigWallet(helper)
 (private_key, public_key) = smcSafeMultisigWallet.keypair()
 
 print("> deploy and init DemiurgeStore")
-smcDemiurgeStore = ts4.BaseContract('DemiurgeStore', {}, nickname = 'demiurgeStore')
+smcDemiurgeStore = DemiurgeStore()
 
-def load_image(name):
-    code = ts4.load_code_cell('../build/{}.tvc'.format(name))
-    return helper.call_getter('make_image_cell', dict(code = code))
+ttwCode = ts4.core.load_code_cell('../build/TONTokenWallet.tvc')
 
-demiurgeImage = load_image('Demiurge')
-proposalImage = load_image('Proposal')
-padawanImage  = load_image('Padawan')
-
-smcDemiurgeStore.call_method('setDemiurgeImage', {'image': demiurgeImage})
-smcDemiurgeStore.call_method('setProposalImage', {'image': proposalImage})
-smcDemiurgeStore.call_method('setPadawanImage',  {'image': padawanImage})
+smcRT = ts4.BaseContract('RootTokenContract',
+        ctor_params = dict(
+            name            = ts4.str2bytes('test'),
+            symbol          = ts4.str2bytes('test'),
+            decimals        = 0,
+            root_public_key = public_key,
+            root_owner      = '0x0',
+            wallet_code     = ttwCode,
+            total_supply    = 21000000
+        ),
+        pubkey      = public_key,
+        private_key = private_key,
+        nickname    = 'RootTokenContract',
+    )
 
 ts4.ensure_queue_empty()
 
-
-
-ttwImage = ts4.core.load_code_cell('../build/TONTokenWallet.tvc')
-
-smcRT = ts4.BaseContract('RootTokenContract', ctor_params = dict(
-            name = ts4.str2bytes('test'),
-            symbol = ts4.str2bytes('test'),
-            decimals = 0,
-            root_public_key = public_key,
-            root_owner = '0x0',
-            wallet_code= ttwImage,
-            total_supply= 21000000
-        ),
-        pubkey = public_key,
-        private_key = private_key,
-        nickname = 'RootTokenContract',
-    )
-ts4.dispatch_messages()
-
 print("==================== deploy and init Demiurge ==================== ")
-print(smcDemiurgeStore.addr())
+print('smcDemiurgeStore.addr =', smcDemiurgeStore.addr())
 
 demiurge = ts4.BaseContract('Demiurge',
-        ctor_params = None,
-        pubkey      = public_key,
-        private_key = private_key,
-        nickname     = 'demiurge',
-    )
+    ctor_params = None,
+    pubkey      = public_key,
+    private_key = private_key,
+    nickname     = 'demiurge',
+)
 
 demiurge.call_method('constructor', dict(
-      store = smcDemiurgeStore.addr(),
-      densRoot = smcTestRoot.addr(),
-      tokenRoot = smcRT.addr()
+      store     = smcDemiurgeStore.addr(),
+      densRoot  = smcTestRoot.addr(),
+      tokenRoot = smcRT.addr(),
 ), private_key = private_key)
 
 # Disalbe verbosity to cleanup long output
@@ -121,11 +133,8 @@ ts4.set_verbose(False)
 ts4.dispatch_messages()
 ts4.set_verbose(True)
 
-images = demiurge.call_getter('getImages', {})
-
-assert eq(['padawan', 'proposal'], list(images.keys()))
-assert eq(padawanImage,  images['padawan'])
-assert eq(proposalImage, images['proposal'])
+# Ensure demiurge has correct images
+smcDemiurgeStore.checkDemiurgeImages(demiurge)
 
 
 print("==================== deploy and init tip3 ====================")
@@ -187,7 +196,7 @@ TTWAddr = ts4.Address(TTWAddr)
 smcTTWPadawan = ts4.BaseContract('TONTokenWallet', None, address=TTWAddr, pubkey = public_key,
         private_key = private_key)
 
-ts4.dump_js_data()
+# ts4.dump_js_data()
 
 TOKEN_DEPOSIT = 21000000
 
