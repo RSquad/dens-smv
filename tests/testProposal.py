@@ -231,7 +231,7 @@ assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': 0, 'votesAgai
 print("==================== getProposalData ====================")
 print(proposal.call_getter('getProposalData',{}))
 
-print(demiurge.call_getter('getDeployed',{}))
+print(demiurge.call_getter_raw('getDeployed',{}))
 
 print("==================== VoteFor Proposal ====================")
 
