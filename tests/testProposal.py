@@ -188,11 +188,6 @@ smcSafeMultisigWallet.call_method('sendTransaction',  dict(
         payload = payloadDepositTokens
     ), private_key = private_key)
 
-ts4.dispatch_one_message()
-ts4.dispatch_one_message()
-ts4.dispatch_one_message()
-# ts4.core.set_trace(True)
-ts4.dispatch_one_message()
 ts4.dispatch_messages()
 
 
@@ -288,7 +283,7 @@ smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = priva
 ts4.dispatch_messages()
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'votesAgainst': 0})
 
-##vote again 
+##vote again
 votesMore = 9999
 payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
     'proposal': proposalAddress,
@@ -309,7 +304,7 @@ ts4.dispatch_messages()
 
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor+votesMore, 'votesAgainst': 0})
 
-# TODO check votes after vote period 
+# TODO check votes after vote period
 
 now = int(time.time())
 ts4.core.set_now(now + 8*DAY)
@@ -327,11 +322,6 @@ params = dict(
     )
 
 smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
-ts4.dispatch_one_message()
-ts4.dispatch_one_message()
-ts4.dispatch_one_message()
-# ts4.core.set_trace(True)
-ts4.dispatch_one_message()
 ts4.dispatch_messages()
 
 

@@ -119,10 +119,11 @@ contract Proposal is Base, IProposal, IBaseData {
     function _calculateVotes(
         uint32 yes,
         uint32 no,
-        uint32 total,
+        uint32 total1,
         VoteCountModel model
     ) private inline pure returns (bool) {
         bool passed = false;
+		uint total = total1;
         passed = (yes * total * 10 > total * total + no * (8 * total  + 20));
         return passed;
     }
