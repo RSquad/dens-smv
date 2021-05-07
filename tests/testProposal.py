@@ -40,7 +40,12 @@ class Helper(ts4.BaseContract):
         super(Helper, self).__init__(
             'Helper', {}, nickname = 'helper'
         )
-        
+
+    def encode_voteFor_call(self, addr, choice, votes):
+        params = dict(proposal = addr, choice = choice, votes = votes)
+        return self.call_getter('encode_voteFor_call', params)
+
+
 print("==================== Initialization ====================")
 
 # Load some ABI beforehand to dismiss 'Unknown message' warnings
@@ -241,11 +246,7 @@ smcPadawan.call_method('voteFor',{
 
 ## Vote before proposal starts
 votesFor = 20000
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesFor
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 
@@ -258,11 +259,7 @@ ts4.dispatch_messages()
 ts4.core.set_now(proposalVotingStart+1)
 
 votesFor = 20000
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesFor
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)    # TODO: duplicate?
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
@@ -270,11 +267,7 @@ assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'vo
 
 ##vote again
 votesMore = 9999
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesMore
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesMore)
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
