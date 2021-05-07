@@ -13,7 +13,7 @@ assert eq('0.2.1', ts4.__version__)
 
 class SafeMultisigWallet(ts4.BaseContract):
 
-    def __init__(self, helper):
+    def __init__(self):
         self.create_keypair()
         super(SafeMultisigWallet, self).__init__(
             'SafeMultisigWallet',
@@ -24,7 +24,7 @@ class SafeMultisigWallet(ts4.BaseContract):
             nickname    = 'wallet',
         )
 
-    def sendTransaction(self, dest, payload):
+    def sendTransaction(self, dest, payload, dispatch = True):
         params = dict(
             dest    = dest.addr(),
             value   = 5_000_000_000,
@@ -33,6 +33,8 @@ class SafeMultisigWallet(ts4.BaseContract):
             payload = payload,
         )
         self.call_method_signed('sendTransaction', params)
+        if dispatch:
+            ts4.dispatch_messages()
 
 class Helper(ts4.BaseContract):
 
@@ -87,7 +89,7 @@ helper = Helper()
 
 smcTestRoot = ts4.BaseContract('TestRoot', {}, nickname = 'TestRoot')
 
-smcSafeMultisigWallet = SafeMultisigWallet(helper)
+smcSafeMultisigWallet = SafeMultisigWallet()
 (private_key, public_key) = smcSafeMultisigWallet.keypair()
 
 print("> deploy and init DemiurgeStore")
@@ -103,7 +105,7 @@ smcRT = ts4.BaseContract('RootTokenContract',
             root_public_key = public_key,
             root_owner      = '0x0',
             wallet_code     = ttwCode,
-            total_supply    = 21000000
+            total_supply    = 21_000_000,
         ),
         pubkey      = public_key,
         private_key = private_key,
@@ -119,7 +121,7 @@ demiurge = ts4.BaseContract('Demiurge',
     ctor_params = None,
     pubkey      = public_key,
     private_key = private_key,
-    nickname     = 'demiurge',
+    nickname    = 'demiurge',
 )
 
 demiurge.call_method('constructor', dict(
@@ -146,7 +148,7 @@ walletAddress = smcRT.call_method('deployWallet', {
       'internal_owner': 0,
       'tokens': 21000000,
       'grams': 5*ts4.GRAM,
-    }, private_key=private_key)
+    }, private_key = private_key)
 
 ts4.dispatch_messages()
 
@@ -165,8 +167,6 @@ ts4.ensure_queue_empty()
 smcSafeMultisigWallet.ensure_balance(100*ts4.GRAM)
 
 smcSafeMultisigWallet.sendTransaction(demiurge, payload)
-
-ts4.dispatch_messages()
 
 padawanAddress = (demiurge.call_getter_raw('getDeployed',{}))['padawans'][public_key]['addr']
 
@@ -214,9 +214,6 @@ payloadDepositTokens =  helper.call_getter('encode_depositTokens_call', dict(
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadDepositTokens)
 
-ts4.dispatch_messages()
-
-
 print("==================== deploy and init Valid Date Proposal ====================")
 
 proposalVotingStart = now + 10
@@ -232,7 +229,7 @@ payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_
         },
 })
 
-smcSafeMultisigWallet.sendTransaction(demiurge, payloadDeployReserveProposal)
+smcSafeMultisigWallet.sendTransaction(demiurge, payloadDeployReserveProposal, dispatch = False)
 ts4.dispatch_one_message()
 msg = ts4.peek_msg()
 assert msg.is_call('constructor')
@@ -270,8 +267,7 @@ payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 
-#TODO accept VoteRejected
-ts4.dispatch_messages()
+# TODO accept VoteRejected
 
 
 
@@ -282,7 +278,6 @@ votesFor = 20000
 payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)    # TODO: duplicate?
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
-ts4.dispatch_messages()
 
 assert eq((votesFor, 0), getCurrentVotes(proposal))
 
@@ -291,24 +286,21 @@ votesMore = 9999
 payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesMore)
 
 smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
-ts4.dispatch_messages()
 
 assert eq((votesFor + votesMore, 0), getCurrentVotes(proposal))
 
 # TODO check votes after vote period
 
 ts4.core.set_now(now + 8*DAY)
-print(proposal.call_getter('getProposalData',{}))
+print(proposal.call_getter('getProposalData'))
 
 
 payloadWrap = helper.call_getter('encode_wrapUp_call', {})
 
 smcSafeMultisigWallet.sendTransaction(proposal, payloadWrap)
-ts4.dispatch_messages()
 
-
-print(proposal.call_getter('getCurrentVotes',  {}))
-print(proposal.call_getter('getVotingResults', {}))
+print(proposal.call_getter('getCurrentVotes'))
+print(proposal.call_getter('getVotingResults'))
 
 
 
