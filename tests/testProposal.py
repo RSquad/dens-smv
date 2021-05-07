@@ -11,6 +11,41 @@ ts4.G_WARN_ON_UNEXPECTED_ANSWERS = True
 
 assert eq('0.2.1', ts4.__version__)
 
+class SafeMultisigWallet(ts4.BaseContract):
+
+    def __init__(self, helper):
+        self.create_keypair()
+        super(SafeMultisigWallet, self).__init__(
+            'SafeMultisigWallet',
+            ctor_params = dict(
+                reqConfirms = 0,
+                owners      = [self.public_key_],
+            ),
+            nickname    = 'wallet',
+        )
+
+    def sendTransaction(self, dest, payload):
+        params = dict(
+            dest    = dest.addr(),
+            value   = 5_000_000_000,
+            bounce  = True,
+            flags   = 3,
+            payload = payload,
+        )
+        self.call_method_signed('sendTransaction', params)
+
+class Helper(ts4.BaseContract):
+
+    def __init__(self):
+        super(Helper, self).__init__(
+            'Helper', {}, nickname = 'helper'
+        )
+
+    def encode_voteFor_call(self, addr, choice, votes):
+        params = dict(proposal = addr, choice = choice, votes = votes)
+        return self.call_getter('encode_voteFor_call', params)
+
+
 print("==================== Initialization ====================")
 
 # Load some ABI beforehand to dismiss 'Unknown message' warnings
@@ -19,20 +54,12 @@ ts4.register_abi('TONTokenWallet')
 ts4.register_abi('RootTokenContract')
 ts4.register_abi('Proposal')
 
-helper  = ts4.BaseContract('Helper', {}, nickname = 'helper')
+helper = Helper()
 
 smcTestRoot = ts4.BaseContract('TestRoot', {}, nickname = 'TestRoot')
 
-(private_key, public_key) = ts4.make_keypair()
-smcSafeMultisigWallet = ts4.BaseContract('SafeMultisigWallet',
-        ctor_params = dict(
-            reqConfirms = 0,
-            owners      = [public_key],
-        ),
-        pubkey      = public_key,
-        private_key = private_key,
-        nickname     = 'wallet',
-    )
+smcSafeMultisigWallet = SafeMultisigWallet(helper)
+(private_key, public_key) = smcSafeMultisigWallet.keypair()
 
 print("> deploy and init DemiurgeStore")
 smcDemiurgeStore = ts4.BaseContract('DemiurgeStore', {}, nickname = 'demiurgeStore')
@@ -122,16 +149,9 @@ print("==================== deploy and init Padawan ====================")
 payload = helper.call_getter('encode_deployPadawan_call', dict(pubkey = public_key))
 ts4.dispatch_messages()
 
-params = dict(
-        dest = demiurge.addr(),
-        value = 15_500_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payload
-    )
 print(ts4.get_balance(smcSafeMultisigWallet.addr()))
 
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(demiurge, payload)
 
 ts4.dispatch_messages()
 
@@ -148,7 +168,7 @@ smcPadawan.ensure_balance((5-2)*ts4.GRAM)
 
 #payloadCreateTokenAccount = helper.call_getter('encode_createTokenAccount_call', {'tokenRoot': smcRT.addr()})
 
-#smcSafeMultisigWallet.call_method('sendTransaction', dict(
+#smcSafeMultisigWallet.sendTransaction(dict(
 #        dest = smcPadawan.addr(),
 #        value = 6_000_000_000,
 #        bounce = False,
@@ -179,14 +199,7 @@ payloadDepositTokens =  helper.call_getter('encode_depositTokens_call', dict(
     tokenId = smcRT.addr().str().replace('0:', '0x'),
     tokens = TOKEN_DEPOSIT))
 
-
-smcSafeMultisigWallet.call_method('sendTransaction',  dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = True,
-        flags = 3,
-        payload = payloadDepositTokens
-    ), private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadDepositTokens)
 
 ts4.dispatch_messages()
 
@@ -206,15 +219,7 @@ payloadDeployReserveProposal = helper.call_getter('encode_deployReserveProposal_
         },
 })
 
-params = dict(
-        dest = demiurge.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadDeployReserveProposal
-    )
-
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(demiurge, payloadDeployReserveProposal)
 ts4.dispatch_one_message()
 msg = ts4.peek_msg()
 proposalAddress = msg.dst
@@ -226,7 +231,7 @@ assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': 0, 'votesAgai
 print("==================== getProposalData ====================")
 print(proposal.call_getter('getProposalData',{}))
 
-print(demiurge.call_getter('getDeployed',{}))
+print(demiurge.call_getter_raw('getDeployed',{}))
 
 print("==================== VoteFor Proposal ====================")
 
@@ -241,22 +246,11 @@ smcPadawan.call_method('voteFor',{
 
 ## Vote before proposal starts
 votesFor = 20000
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesFor
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
-#TODO accert VoteRejected
+#TODO accept VoteRejected
 ts4.dispatch_messages()
 
 
@@ -265,41 +259,17 @@ ts4.dispatch_messages()
 ts4.core.set_now(proposalVotingStart+1)
 
 votesFor = 20000
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesFor
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesFor)    # TODO: duplicate?
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
-
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor, 'votesAgainst': 0})
 
 ##vote again
 votesMore = 9999
-payloadvoteFor = helper.call_getter('encode_voteFor_call',  {
-    'proposal': proposalAddress,
-    'choice': True,
-    'votes': votesMore
-})
+payloadvoteFor = helper.encode_voteFor_call(proposalAddress, True, votesMore)
 
-params = dict(
-        dest = smcPadawan.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadvoteFor
-    )
-
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(smcPadawan, payloadvoteFor)
 ts4.dispatch_messages()
 
 assert eq(proposal.call_getter('getCurrentVotes',{}), {'votesFor': votesFor+votesMore, 'votesAgainst': 0})
@@ -313,20 +283,12 @@ print(proposal.call_getter('getProposalData',{}))
 
 payloadWrap = helper.call_getter('encode_wrapUp_call', {})
 
-params = dict(
-        dest = proposal.addr(),
-        value = 5_000_000_000,
-        bounce = False,
-        flags = 3,
-        payload = payloadWrap
-    )
-
-smcSafeMultisigWallet.call_method('sendTransaction', params, private_key = private_key)
+smcSafeMultisigWallet.sendTransaction(proposal, payloadWrap)
 ts4.dispatch_messages()
 
 
-print(proposal.call_getter('getCurrentVotes',{}))
-print(proposal.call_getter('getVotingResults',{}))
+print(proposal.call_getter('getCurrentVotes',  {}))
+print(proposal.call_getter('getVotingResults', {}))
 
 
 
