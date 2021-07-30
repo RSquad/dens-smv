@@ -41,5 +41,6 @@ enum ContractType {
 
 enum ContractAddr {
     DensRoot,
-    TokenRoot
+    TokenRoot,
+    FaucetTokenWallet
 }

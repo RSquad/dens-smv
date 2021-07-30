@@ -24,6 +24,7 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
     address _addrStore;
     address _addrDensRoot;
     address _addrTokenRoot;
+    address _addrFaucetWallet;
 
     uint8 _checkList;
 
@@ -72,6 +73,7 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
             DemiurgeStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractType.Padawan);
             DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.DensRoot);
             DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
+            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.FaucetTokenWallet);
         }
 
         _createChecks();
@@ -118,6 +120,7 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
     ) public onlyMe {
         TvmCell state = _buildProposalState(title);
         new Proposal {stateInit: state, value: START_BALANCE}(
+            _addrFaucetWallet,
             _addrDensRoot,
             proposalType,
             specific,
@@ -135,6 +138,8 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
             _addrDensRoot = addr;
         } else if (kind == ContractAddr.TokenRoot) {
             _addrTokenRoot = addr;
+        } else if (kind == ContractAddr.FaucetTokenWallet) {
+            _addrFaucetWallet = addr;
         }
     }
 
@@ -156,13 +161,15 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
         TvmCell codeProposal,
         address addrStore,
         address addrDensRoot,
-        address addrTokenRoot
+        address addrTokenRoot,
+        address addrFaucetWallet
     ) {
         codePadawan = _codePadawan;
         codeProposal = _codeProposal;
         addrStore = _addrStore;
         addrDensRoot = _addrDensRoot;
         addrTokenRoot = _addrTokenRoot;
+        addrFaucetWallet = _addrFaucetWallet;
     }
 
     function getStats() public view returns (uint16 version, uint32 deployedPadawansCounter, uint32 deployedProposalsCounter) {
