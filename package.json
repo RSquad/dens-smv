@@ -7,10 +7,10 @@
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha --exit -r ts-node/register -r dotenv/config -t 300000 'tests/**/*.test.ts'",
     "compile": "node ./compile.js",
     "test:compile": "npm run compile && npm run test",
-    "release": "npm run build && standard-version",
-    "release:patch": "npm run build && npm run release -- --release-as patch",
-    "release:minor": "npm run build && npm run release -- --release-as minor",
-    "release:major": "npm run build && npm run release -- --release-as major"
+    "release": "standard-version",
+    "release:patch": "npm run release -- --release-as patch",
+    "release:minor": "npm run release -- --release-as minor",
+    "release:major": "npm run release -- --release-as major"
   },
   "author": {
     "name": "rsquad",
