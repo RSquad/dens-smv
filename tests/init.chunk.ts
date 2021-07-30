@@ -142,7 +142,7 @@ export default async (
   console.log(`public: ${smcFaucet.keys.public}`);
   console.log(`secret: ${smcFaucet.keys.secret}`);
 
-  fs.writeFileSync("./fk", JSON.stringify(smcFaucet.keys));
+  fs.writeFileSync("./ftwk", JSON.stringify(smcFaucet.keys));
 
   let keys = await client.crypto.generate_random_sign_keys();
   await smcFaucet.call({
