@@ -14,6 +14,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
     string static _title;
     
     address _addrDensRoot;
+    address _addrFaucetTokenWallet;
 
     ProposalInfo _proposalInfo;
 
@@ -25,6 +26,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
     uint _totalVotes = 21000000;
 
     constructor(
+        address addrFaucetTokenWallet,
         address addrDensRoot,
         ProposalType proposalType,
         TvmCell specific,
@@ -44,6 +46,8 @@ contract Proposal is Base, PadawanResolver, IProposal {
         _codePadawan = codePadawan;
 
         _voteCountModel = VoteCountModel.SoftMajority;
+
+        _addrFaucetTokenWallet = addrFaucetTokenWallet;
     }
 
     function wrapUp() external override {
