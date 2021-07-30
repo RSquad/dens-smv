@@ -1,55 +1,49 @@
 pragma ton-solidity >= 0.36.0;
+pragma AbiHeader expire;
+pragma AbiHeader time;
 
-import "Base.sol";
-import "Padawan.sol";
+import "./Base.sol";
+import "./Errors.sol";
+import "./resolvers/PadawanResolver.sol";
+import "./interfaces/IClient.sol";
 import "./interfaces/IProposal.sol";
-import "./interfaces/IDemiurge.sol";
-import "./interfaces/IInfoCenter.sol";
+import "./interfaces/IPadawan.sol";
 
-contract Proposal is Base, IProposal, IBaseData {
-
-    uint16 constant ERROR_NOT_AUTHORIZED_VOTER  =   302; // Only ProposalInitiatorWallet cal create proposals
-    uint16 constant ERROR_TOO_EARLY_FOR_RECLAIM =   303; // Can't return deposit before proposal expiration
-
-//    uint16 constant ERROR_NOT_AUTHORIZED_VOTER  = 250; // Votes are not accepted at this time
-    uint16 constant ERROR_VOTING_NOT_STARTED    = 251;   // Votes are not accepted at this time
-    uint16 constant ERROR_VOTING_HAS_ENDED      = 252;  // Votes are not accepted at this time
-    uint16 constant ERROR_VOTING_HAS_NOT_ENDED  = 253;  // Votes are not accepted at this time
-    uint16 constant ERROR_VOTER_IS_NOT_ELIGIBLE = 254;  // Voter is not eligible to vote for this proposal
+contract Proposal is Base, PadawanResolver, IProposal {
+    address static _deployer;
+    string static _title;
+    
+    address _addrDensRoot;
 
     ProposalInfo _proposalInfo;
-    address static _deployer;
-
-    bool _hasWhitelist;
-    mapping (address => bool) _voters;
-    TvmCell _padawanSI;
-
-    struct ProposalStatus {
-        ProposalState state;
-        uint32 votesFor;
-        uint32 votesAgainst;
-    }
 
     ProposalResults _results;
-
-    ProposalStatus _state;
     VoteCountModel _voteCountModel;
 
     event ProposalFinalized(ProposalResults results);
 
-    constructor() public {
-        require(_deployer == msg.sender);
-        _state.state = ProposalState.New;
-        IInfoCenter(_deployer).onProposalDeploy{value: DEF_RESPONSE_VALUE}();
-    }
+    uint _totalVotes = 21000000;
 
-    function initProposal(ProposalInfo proposalInfo, TvmCell padawanSI) external {
-        _proposalInfo = proposalInfo;
-        _padawanSI = padawanSI;
+    constructor(
+        address addrDensRoot,
+        ProposalType proposalType,
+        TvmCell specific,
+        TvmCell codePadawan
+    ) public {
+        require(_deployer == msg.sender);
+
+        _addrDensRoot = addrDensRoot;
+
+        _proposalInfo.title = _title;
+        _proposalInfo.start = uint32(now);
+        _proposalInfo.end = uint32(now + 60 * 60 * 24 * 7);
+        _proposalInfo.proposalType = proposalType;
+        _proposalInfo.specific = specific;
+        _proposalInfo.state = ProposalState.New;
+
+        _codePadawan = codePadawan;
 
         _voteCountModel = VoteCountModel.SoftMajority;
-
-        _state.state = ProposalState.OnVoting;
     }
 
     function wrapUp() external override {
@@ -58,140 +52,125 @@ contract Proposal is Base, IProposal, IBaseData {
     }
 
     /* Implements SMV algorithm and has vote function to receive ‘yes’ or ‘no’ votes from Voting Wallet. */
-    function voteFor(uint256 key, bool choice, uint32 deposit) external override {
-        TvmCell code = _padawanSI.toSlice().loadRef();
-        TvmCell state = tvm.buildStateInit({
-            contr: Padawan,
-            varInit: {deployer: _deployer},
-            pubkey: key,
-            code: code
-        });
-        address padawanAddress = address.makeAddrStd(0, tvm.hash(state));
+    function vote(address addrPadawanOwner, bool choice, uint32 votesCount) external override {
+        address addrPadawan = resolvePadawan(addrPadawanOwner);
         uint16 errorCode = 0;
-        address from = msg.sender;
 
-        if (padawanAddress != from) {
-            errorCode = ERROR_NOT_AUTHORIZED_VOTER;
+        if (addrPadawan != msg.sender) {
+            errorCode = Errors.NOT_AUTHORIZED_CONTRACT;
         } else if (now < _proposalInfo.start) {
-            errorCode = ERROR_VOTING_NOT_STARTED;
+            errorCode = Errors.VOTING_NOT_STARTED;
         } else if (now > _proposalInfo.end) {
-            errorCode = ERROR_VOTING_HAS_ENDED;
-        } else if (_hasWhitelist) {
-            if (!_voters.exists(from)) {
-                errorCode = ERROR_VOTER_IS_NOT_ELIGIBLE;
-            }
+            errorCode = Errors.VOTING_HAS_ENDED;
         }
 
         if (errorCode > 0) {
-            IPadawan(from).rejectVote{value: 0, flag: 64, bounce: true}(_proposalInfo.id, deposit, errorCode);
+            IPadawan(msg.sender).rejectVote{value: 0, flag: 64, bounce: true}(votesCount, errorCode);
         } else {
-            IPadawan(from).confirmVote{value: 0, flag: 64, bounce: true}(_proposalInfo.id, deposit);
+            IPadawan(msg.sender).confirmVote{value: 0, flag: 64, bounce: true}(votesCount);
             if (choice) {
-                _state.votesFor += deposit;
+                _proposalInfo.votesFor += votesCount;
             } else {
-                _state.votesAgainst += deposit;
+                _proposalInfo.votesAgainst += votesCount;
             }
         }
 
         _wrapUp();
     }
 
-    function finalize(bool passed) external me {
-        tvm.accept();
-
+    function _finalize(bool passed) private {
         _results = ProposalResults(
-            _proposalInfo.id,
+            uint32(0),
             passed,
-            _state.votesFor,
-            _state.votesAgainst,
-            100000,
+            _proposalInfo.votesFor,
+            _proposalInfo.votesAgainst,
+            _totalVotes,
             _voteCountModel,
             uint32(now)
         );
 
-        ProposalState state = passed ? ProposalState.Passed : ProposalState.Failed;
-        _transit(state);
-        emit ProposalFinalized(_results);
-        uint128 bondValue = 1 ton;
-        IInfoCenter(_deployer).onProposalFinalized{value: bondValue}(_results);
-    }
+        ProposalState state = passed ? ProposalState.Passed : ProposalState.NotPassed;
 
-    function _calculateVotes(
-        uint32 yes,
-        uint32 no,
-        uint32 total,
-        VoteCountModel model
-    ) private inline pure returns (bool) {
-        bool passed = false;
-        if (model == VoteCountModel.Majority) {
-            passed = (yes > no);
-        } else if (model == VoteCountModel.SoftMajority) {
-            passed = (yes * total * 10 >= total * total + no * (8 * total  + 20));
-        } else if (model == VoteCountModel.SuperMajority) {
-            passed = (yes * total * 3 >= total * total + no * (total + 6));
-        } else if (model == VoteCountModel.Other) {
-            //
-        }
-        return passed;
+        _changeState(state);
+
+        IClient(address(_addrDensRoot)).onProposalPassed{value: 1 ton} (_proposalInfo);
+
+        emit ProposalFinalized(_results);
     }
 
     function _tryEarlyComplete(
         uint32 yes,
-        uint32 no,
-        uint32 total,
-        VoteCountModel model
-    ) private inline pure returns (bool, bool) {
+        uint32 no
+    ) private view returns (bool, bool) {
         (bool completed, bool passed) = (false, false);
-        if (model == VoteCountModel.Majority) {
-            (completed, passed) = (2*yes > total) ? (true, true) : ((2*no >= total) ? (true, false) : (false, false));
-        } else if (model == VoteCountModel.SoftMajority) {
-            (completed, passed) = (2*yes > total) ? (true, true) : ((2*no >= total) ? (true, false) : (false, false));
-        } else if (model == VoteCountModel.SuperMajority) {
-            (completed, passed) = (3*yes > 2*total) ? (true, true) : ((3*no > total) ? (true, false) : (false, false));
-        } else if (model == VoteCountModel.Other) {
-            //
+        if (yes * 2 > _totalVotes) {
+            completed = true;
+            passed = true;
+        } else if(no * 2 >= _totalVotes) {
+            completed = true;
+            passed = false;
         }
         return (completed, passed);
     }
 
-    function _transit(ProposalState state) private inline {
-        _state.state = state;
-    }
-
     function _wrapUp() private {
         (bool completed, bool passed) = (false, false);
+
         if (now > _proposalInfo.end) {
             completed = true;
-            passed = _calculateVotes(_state.votesFor, _state.votesAgainst, 100000, _voteCountModel);
+            passed = _calculateVotes(_proposalInfo.votesFor, _proposalInfo.votesAgainst);
         } else {
-            (completed, passed) = _tryEarlyComplete(
-                _state.votesFor,
-                _state.votesAgainst,
-                100000,
-                _voteCountModel
-            );
+            (completed, passed) = _tryEarlyComplete(_proposalInfo.votesFor, _proposalInfo.votesAgainst);
         }
 
         if (completed) {
-            _transit(ProposalState.Ended);
-            this.finalize{value: DEF_COMPUTE_VALUE}(passed);
+            _changeState(ProposalState.Ended);
+            _finalize(passed);
         }
     }
 
-    function queryStatus() external override {
-        IPadawan(msg.sender).updateStatus(_proposalInfo.id, _state.state);
+    function _calculateVotes(
+        uint32 yes,
+        uint32 no
+    ) private view returns (bool) {
+        bool passed = false;
+        passed = _softMajority(yes, no);
+        return passed;
     }
 
-    /*
-    *   Get Methods
-    */
+    function _softMajority(
+        uint32 yes,
+        uint32 no
+    ) private view returns (bool) {
+        bool passed = false;
+        passed = yes >= 1 + (_totalVotes / 10) + (no * ((_totalVotes / 2) - (_totalVotes / 10))) / (_totalVotes / 2);
+        return passed;
+    }
 
-    function getId() public view returns (uint256 id) {
-        id = tvm.pubkey();
+    function _changeState(ProposalState state) private inline {
+        _proposalInfo.state = state;
+    }
+
+    function _buildPadawanState(address owner) internal view override returns (TvmCell) {
+        return tvm.buildStateInit({
+            contr: Padawan,
+            varInit: {_deployer: _deployer, _owner: owner},
+            code: _codePadawan
+        });
+    }
+
+    function queryStatus() external override {
+        IPadawan(msg.sender).updateStatus(_proposalInfo.state);
+    }
+
+    // Getters
+
+    function getAll() public view override returns (ProposalInfo info) {
+        info = _proposalInfo;
     }
 
     function getVotingResults() public view returns (ProposalResults vr) {
-        require(_state.state > ProposalState.Ended, ERROR_VOTING_HAS_NOT_ENDED);
+        require(_proposalInfo.state > ProposalState.Ended, Errors.VOTING_HAS_NOT_ENDED);
         vr = _results;
     }
 
@@ -199,12 +178,8 @@ contract Proposal is Base, IProposal, IBaseData {
         info = _proposalInfo;
     }
 
-    function getCurrentVotes() public view returns (uint32 votesFor, uint32 votesAgainst) {
-        return (_state.votesFor, _state.votesAgainst);
-    }
-
-    function getProposalData() public view returns (ProposalInfo info, ProposalStatus status) {
-        return (_proposalInfo, _state);
+    function getCurrentVotes() external override view returns (uint32 votesFor, uint32 votesAgainst) {
+        return (_proposalInfo.votesFor, _proposalInfo.votesAgainst);
     }
 
 }

@@ -1,8 +1,9 @@
 pragma ton-solidity >= 0.36.0;
 
+import './Proposal.sol';
+
 import "./interfaces/IClient.sol";
-import "./interfaces/IInfoCenter.sol";
-import "./interfaces/IBaseData.sol";
+import './Glossary.sol';
 
 
 contract Demiurge is IClient {
@@ -11,6 +12,17 @@ contract Demiurge is IClient {
 
     constructor() public {
         tvm.accept();
+    }
+
+    function onProposalDeploy(
+        address addr,
+        ProposalType proposalType,
+        TvmCell specific
+    ) external override {
+        addr;
+        proposalType;
+        specific;
+        msg.sender.transfer(0, false, 64);
     }
 
     function onProposalPassed(ProposalInfo proposalInfo) external override {

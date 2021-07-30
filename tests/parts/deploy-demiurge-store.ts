@@ -1,12 +1,17 @@
 import { TonClient } from "@tonclient/core";
-import TonContract from "../ton-contract";
 import pkgDemiurgeStore from "../../ton-packages/DemiurgeStore.package";
 import pkgPadawan from "../../ton-packages/Padawan.package";
 import pkgProposal from "../../ton-packages/Proposal.package";
 import pkgDemiurge from "../../ton-packages/Demiurge.package";
-import { trimlog } from "../utils/common";
+import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
+import { TonContract } from "@rsquad/ton-utils";
 
-export default async (client: TonClient, smcNSEGiver: TonContract) => {
+export default async (
+  client: TonClient,
+  smcSafeMultisigWallet: TonContract,
+  addrDensRoot: string,
+  addrTokenRoot: string
+) => {
   const smcDemiurgeStore = new TonContract({
     client,
     name: "DemiurgeStore",
@@ -16,35 +21,33 @@ export default async (client: TonClient, smcNSEGiver: TonContract) => {
 
   await smcDemiurgeStore.calcAddress();
 
-  await smcNSEGiver.call({
-    functionName: "sendGrams",
-    input: {
-      dest: smcDemiurgeStore.address,
-      amount: 100_000_000_000,
-    },
+  await sendThroughMultisig({
+    smcSafeMultisigWallet,
+    dest: smcDemiurgeStore.address,
+    value: 100_000_000_000,
   });
-
-  trimlog(`DemiurgeStore address: ${smcDemiurgeStore.address}
-    DemiurgeStore public: ${smcDemiurgeStore.keys.public}
-    DemiurgeStore secret: ${smcDemiurgeStore.keys.secret}
-    DemiurgeStore balance: ${await smcDemiurgeStore.getBalance()}`);
 
   await smcDemiurgeStore.deploy();
 
+  console.log(`DemiurgeStore address: ${smcDemiurgeStore.address}`);
+
   await smcDemiurgeStore.call({
-    functionName: "setDemiurgeImage",
-    input: { image: pkgDemiurge.image },
+    functionName: "setProposalCode",
+    input: await client.boc.get_code_from_tvc({ tvc: pkgProposal.image }),
   });
   await smcDemiurgeStore.call({
-    functionName: "setProposalImage",
-    input: { image: pkgProposal.image },
-  });
-  await smcDemiurgeStore.call({
-    functionName: "setPadawanImage",
-    input: { image: pkgPadawan.image },
+    functionName: "setPadawanCode",
+    input: await client.boc.get_code_from_tvc({ tvc: pkgPadawan.image }),
   });
 
-  // TODO: add images check
+  await smcDemiurgeStore.call({
+    functionName: "setDensRootAddr",
+    input: { addr: addrDensRoot },
+  });
+  await smcDemiurgeStore.call({
+    functionName: "setTokenRootAddr",
+    input: { addr: addrTokenRoot },
+  });
 
   return smcDemiurgeStore;
 };

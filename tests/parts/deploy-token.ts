@@ -1,72 +1,75 @@
 import { TonClient } from "@tonclient/core";
-import TonContract from "../ton-contract";
-import pkgRT from "../../ton-packages/RT.package";
-import pkgTTW from "../../ton-packages/TTW.package";
-import { sleep, trimlog } from "../utils/common";
-import { utf8ToHex } from "../utils/convert";
+import pkgTokenRoot from "../../ton-packages/RT.package";
+import pkgTokenWallet from "../../ton-packages/TTW.package";
+import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
+import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
+import { TonContract } from "@rsquad/ton-utils";
+const fs = require("fs");
 
-export default async (client: TonClient, smcGiver: TonContract) => {
-  const smcRT = new TonContract({
+export default async (
+  client: TonClient,
+  smcSafeMultisigWallet: TonContract,
+  addrFaucet: string
+) => {
+  const smcTokenRoot = new TonContract({
     client,
-    name: "RT",
-    tonPackage: pkgRT,
+    name: "TokenRoot",
+    tonPackage: pkgTokenRoot,
     keys: await client.crypto.generate_random_sign_keys(),
   });
 
-  await smcRT.calcAddress();
+  await smcTokenRoot.calcAddress();
 
-  await smcGiver.call({
-    functionName: "sendGrams",
-    input: { amount: 10_000_000_000, dest: smcRT.address },
+  await sendThroughMultisig({
+    smcSafeMultisigWallet,
+    dest: smcTokenRoot.address,
+    value: 3_000_000_000,
   });
 
-  await smcRT.deploy({
+  await smcTokenRoot.deploy({
     input: {
-      name: utf8ToHex("tip3"),
-      symbol: utf8ToHex("TP3"),
+      name: utf8ToHex("DeNS Token"),
+      symbol: utf8ToHex("DENS"),
       decimals: 0,
-      root_public_key: `0x${smcRT.keys.public}`,
+      root_public_key: `0x${smcTokenRoot.keys.public}`,
       root_owner: "0x0",
-      wallet_code: (await client.boc.get_code_from_tvc({ tvc: pkgTTW.image }))
-        .code,
-      total_supply: 100000,
+      wallet_code: (
+        await client.boc.get_code_from_tvc({ tvc: pkgTokenWallet.image })
+      ).code,
+      total_supply: 21000000,
     },
   });
 
-  trimlog(`RT address: ${smcRT.address}
-    RT public: ${smcRT.keys.public}
-    RT secret: ${smcRT.keys.secret}
-    RT balance: ${await smcRT.getBalance()}`);
+  console.log(`TokenRoot deployed: ${smcTokenRoot.address}`);
+  console.log(`public: ${smcTokenRoot.keys.public}`);
+  console.log(`secret: ${smcTokenRoot.keys.secret}`);
 
-  const smcTTW = new TonContract({
+  const smcFaucetTokenWallet = new TonContract({
     client,
-    name: "TTW",
-    tonPackage: pkgTTW,
-    keys: await client.crypto.generate_random_sign_keys(),
+    name: "FaucetTokenWallet",
+    tonPackage: pkgTokenWallet,
+    keys: smcTokenRoot.keys,
   });
 
-  const deployTTWResult = await smcRT.call({
+  fs.writeFileSync("./tk", JSON.stringify(smcTokenRoot.keys));
+
+  const deployFaucetTokenWallet = await smcTokenRoot.call({
     functionName: "deployWallet",
     input: {
       _answer_id: 1,
       workchain_id: 0,
-      pubkey: `0x${smcTTW.keys.public}`,
-      internal_owner: 0,
-      tokens: 80000,
-      grams: 5_000_000_000,
+      pubkey: 0,
+      internal_owner: `0x${addrFaucet.slice(2)}`,
+      tokens: 21000000,
+      grams: 1_000_000_000,
     },
   });
 
-  smcTTW.address = deployTTWResult.decoded.output.value0;
+  smcFaucetTokenWallet.address = deployFaucetTokenWallet.decoded.output.value0;
 
-  trimlog(`TTW address: ${smcTTW.address}
-    TTW public: ${smcTTW.keys.public}
-    TTW secret: ${smcTTW.keys.secret}
-    TTW balance: ${await smcTTW.getBalance()}`);
+  console.log(`TokenWalletFaucet deployed: ${smcFaucetTokenWallet.address}`);
+  console.log(`public: ${smcFaucetTokenWallet.keys.public}`);
+  console.log(`secret: ${smcFaucetTokenWallet.keys.secret}`);
 
-  // TODO: add waiting
-
-  await sleep(1000);
-
-  return [smcRT, smcTTW];
+  return [smcTokenRoot, smcFaucetTokenWallet];
 };

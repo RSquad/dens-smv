@@ -1,7 +1,6 @@
+import { TonContract } from "@rsquad/ton-utils";
 import { TonClient } from "@tonclient/core";
-import TonContract from "../ton-contract";
 import pkgSafeMultisigWallet from "../../ton-packages/SafeMultisigWallet.package";
-import { trimlog } from "../utils/common";
 const fs = require("fs");
 
 export default async (client: TonClient, smcGiver: TonContract) => {
@@ -13,7 +12,7 @@ export default async (client: TonClient, smcGiver: TonContract) => {
     keys,
   });
 
-  fs.writeFileSync("./keys.json", JSON.stringify(keys));
+  fs.writeFileSync("./mtsg-keys.json", JSON.stringify(keys));
 
   await smcSafeMultisigWallet.calcAddress();
 
@@ -25,10 +24,7 @@ export default async (client: TonClient, smcGiver: TonContract) => {
     },
   });
 
-  trimlog(`SafeMultisigWallet address: ${smcSafeMultisigWallet.address}
-    SafeMultisigWallet public: ${smcSafeMultisigWallet.keys.public}
-    SafeMultisigWallet secret: ${smcSafeMultisigWallet.keys.secret}
-    SafeMultisigWallet balance: ${await smcSafeMultisigWallet.getBalance()}`);
+  console.log(`SafeMultisigWallet address: ${smcSafeMultisigWallet.address}`);
 
   await smcSafeMultisigWallet.deploy({
     input: {

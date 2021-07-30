@@ -1,4 +1,4 @@
-pragma ton-solidity >= 0.36.0;
+pragma ton-solidity >= 0.42.0;
 
 interface ITokenWallet {
     function getBalance_InternalOwner(uint32 _answer_id) external functionID(0xD);
