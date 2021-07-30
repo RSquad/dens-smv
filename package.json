@@ -1,6 +1,6 @@
 {
   "name": "dens-smv",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "RSquad - DeNS SMV",
   "main": "index.ts",
   "scripts": {
