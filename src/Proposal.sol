@@ -13,7 +13,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
     address static _deployer;
     string static _title;
     
-    address _addrDensRoot;
+    address public _addrClient;
     address _addrFaucetTokenWallet;
 
     ProposalInfo _proposalInfo;
@@ -27,14 +27,14 @@ contract Proposal is Base, PadawanResolver, IProposal {
 
     constructor(
         address addrFaucetTokenWallet,
-        address addrDensRoot,
+        address addrClient,
         ProposalType proposalType,
         TvmCell specific,
         TvmCell codePadawan
     ) public {
         require(_deployer == msg.sender);
 
-        _addrDensRoot = addrDensRoot;
+        _addrClient = addrClient;
 
         _proposalInfo.title = _title;
         _proposalInfo.start = uint32(now);
@@ -97,7 +97,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
 
         _changeState(state);
 
-        IClient(address(_addrDensRoot)).onProposalPassed{value: 1 ton} (_proposalInfo);
+        IClient(address(_addrClient)).onProposalPassed{value: 1 ton} (_proposalInfo);
 
         emit ProposalFinalized(_results);
     }
