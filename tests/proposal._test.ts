@@ -1,7 +1,7 @@
 import { TonClient } from "@tonclient/core";
 import pkgSafeMultisigWallet from "../ton-packages/SafeMultisigWallet.package";
 import pkgProposal from "../ton-packages/Proposal.package";
-import { createClient, TonContract } from "@rsquad/ton-utils";
+import { createClient, logPubGetter, TonContract } from "@rsquad/ton-utils";
 import initChunk from "./init.chunk";
 import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import {
@@ -36,7 +36,7 @@ describe("Proposal test", () => {
   });
 
   it("init system", async () => {
-    const contracts = await initChunk(client, smcSafeMultisigWallet);
+    const { contracts } = await initChunk(client, smcSafeMultisigWallet);
     smcDemiurgeStore = contracts.smcDemiurgeStore;
     smcDemiurge = contracts.smcDemiurge;
     smcTokenRoot = contracts.smcTokenRoot;
@@ -88,5 +88,17 @@ describe("Proposal test", () => {
     });
 
     console.log(`ReserveProposal deployed: ${smcReserveProposal.address}`);
+
+    await logPubGetter(
+      "ReserveProposal ProposalInfo",
+      smcReserveProposal,
+      "_proposalInfo"
+    );
+    await logPubGetter("smcDemiurge _totalVotes", smcDemiurge, "_totalVotes");
+    await logPubGetter(
+      "smcFaucet _totalDistributed",
+      smcFaucet,
+      "_totalDistributed"
+    );
   });
 });

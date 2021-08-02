@@ -14,19 +14,16 @@ contract Proposal is Base, PadawanResolver, IProposal {
     string static _title;
     
     address public _addrClient;
-    address _addrFaucetTokenWallet;
 
-    ProposalInfo _proposalInfo;
+    ProposalInfo public _proposalInfo;
 
     ProposalResults _results;
     VoteCountModel _voteCountModel;
 
     event ProposalFinalized(ProposalResults results);
 
-    uint _totalVotes = 21000000;
-
     constructor(
-        address addrFaucetTokenWallet,
+        uint128 totalVotes,
         address addrClient,
         ProposalType proposalType,
         TvmCell specific,
@@ -42,12 +39,11 @@ contract Proposal is Base, PadawanResolver, IProposal {
         _proposalInfo.proposalType = proposalType;
         _proposalInfo.specific = specific;
         _proposalInfo.state = ProposalState.New;
+        _proposalInfo.totalVotes = totalVotes;
 
         _codePadawan = codePadawan;
 
         _voteCountModel = VoteCountModel.SoftMajority;
-
-        _addrFaucetTokenWallet = addrFaucetTokenWallet;
     }
 
     function wrapUp() external override {
@@ -88,7 +84,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
             passed,
             _proposalInfo.votesFor,
             _proposalInfo.votesAgainst,
-            _totalVotes,
+            _proposalInfo.totalVotes,
             _voteCountModel,
             uint32(now)
         );
@@ -107,10 +103,10 @@ contract Proposal is Base, PadawanResolver, IProposal {
         uint32 no
     ) private view returns (bool, bool) {
         (bool completed, bool passed) = (false, false);
-        if (yes * 2 > _totalVotes) {
+        if (yes * 2 > _proposalInfo.totalVotes) {
             completed = true;
             passed = true;
-        } else if(no * 2 >= _totalVotes) {
+        } else if(no * 2 >= _proposalInfo.totalVotes) {
             completed = true;
             passed = false;
         }
@@ -147,7 +143,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
         uint32 no
     ) private view returns (bool) {
         bool passed = false;
-        passed = yes >= 1 + (_totalVotes / 10) + (no * ((_totalVotes / 2) - (_totalVotes / 10))) / (_totalVotes / 2);
+        passed = yes >= 1 + (_proposalInfo.totalVotes / 10) + (no * ((_proposalInfo.totalVotes / 2) - (_proposalInfo.totalVotes / 10))) / (_proposalInfo.totalVotes / 2);
         return passed;
     }
 

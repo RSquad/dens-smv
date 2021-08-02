@@ -1,6 +1,7 @@
 pragma ton-solidity >= 0.42.0;
 
 import "../Proposal.sol";
+import '../Glossary.sol';
 
 interface IDemiurge {
     function deployPadawan(address owner) external;
@@ -15,4 +16,9 @@ interface IDemiurge {
     function getPadawan(uint key) external view returns (PadawanData data);
 
     function resolvePadawan(address owner) external view returns (address addrPadawan);
+}
+
+interface IDemiurgeStoreCb {
+    function updateAddr(ContractAddr kind, address addr) external;
+    function updateCode(ContractType kind, TvmCell code) external;
 }

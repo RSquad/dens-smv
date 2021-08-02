@@ -21,6 +21,7 @@ struct ProposalInfo {
     ProposalState state;
     uint32 votesFor;
     uint32 votesAgainst;
+    uint128 totalVotes;
 }
 
 struct SetCodeProposalSpecific {

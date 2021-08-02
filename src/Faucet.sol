@@ -11,6 +11,8 @@ import "./interfaces/IFaucet.sol";
 
 contract Faucet is Base, IFaucet {
     mapping(uint256 => uint32) public _balances;
+    
+    uint128 public _totalDistributed;
 
     mapping(address => uint32) _pandingOwner;
 
@@ -27,13 +29,16 @@ contract Faucet is Base, IFaucet {
         require(_balances[msg.pubkey()] != 0, Errors.INVALID_CALLER);
         tvm.accept();
 
+        _totalDistributed = _balances[msg.pubkey()];
         ITokenWallet(_addrTokenWallet).transfer(addrTokenWallet, _balances[msg.pubkey()], 0.1 ton);
 
         delete _balances[msg.pubkey()];
     }
 
-    function getBalance(uint256 userPubkey) external override returns (uint32 balance) {
-        balance = _balances[userPubkey];
+    function getTotalDistributed() public onlyContract override {
+        IFaucetCb(msg.sender).getTotalDistributedCb
+            {value: 0, flag: 64, bounce: false}
+            (_totalDistributed);
     }
 
     function changeBalance(uint256 pubkey, uint32 value) public override signed returns (uint32) {
@@ -48,6 +53,10 @@ contract Faucet is Base, IFaucet {
         ITokenRoot(_addrTokenRoot).deployEmptyWallet
             {value: 0.5 ton, flag: 1, bounce: true}
             (0, 0, msg.pubkey(), 0, 0.25 ton);
+    }
+
+    function getBalance(uint256 userPubkey) external override returns (uint32 balance) {
+        balance = _balances[userPubkey];
     }
 
 }
