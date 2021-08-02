@@ -4,7 +4,7 @@ pragma AbiHeader time;
 
 import './Base.sol';
 import './Glossary.sol';
-import './interfaces/IDemiurgeStoreCallback.sol';
+import './interfaces/IDemiurge.sol';
 
 contract DemiurgeStore is Base {
 
@@ -26,9 +26,9 @@ contract DemiurgeStore is Base {
         require(addr != address(0));
         _addrs[uint8(ContractAddr.TokenRoot)] = addr;
     }
-    function setFaucetTokenWalletAddr(address addr) public signed {
+    function setFaucetAddr(address addr) public signed {
         require(addr != address(0));
-        _addrs[uint8(ContractAddr.FaucetTokenWallet)] = addr;
+        _addrs[uint8(ContractAddr.Faucet)] = addr;
     }
 
     /*
@@ -37,11 +37,11 @@ contract DemiurgeStore is Base {
 
     function queryCode(ContractType kind) public view {
         TvmCell code = _codes[uint8(kind)];
-        IDemiurgeStoreCallback(msg.sender).updateCode{value: 0, flag: 64, bounce: false}(kind, code);
+        IDemiurgeStoreCb(msg.sender).updateCode{value: 0, flag: 64, bounce: false}(kind, code);
     }
 
     function queryAddr(ContractAddr kind) public view {
         address addr = _addrs[uint8(kind)];
-        IDemiurgeStoreCallback(msg.sender).updateAddr{value: 0, flag: 64, bounce: false}(kind, addr);
+        IDemiurgeStoreCb(msg.sender).updateAddr{value: 0, flag: 64, bounce: false}(kind, addr);
     }
 }

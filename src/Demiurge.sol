@@ -8,14 +8,29 @@ import "./Proposal.sol";
 import "./DemiurgeStore.sol";
 import "./interfaces/IProposal.sol";
 import "./interfaces/IClient.sol";
+import "./interfaces/IFaucet.sol";
+import "./interfaces/IDemiurge.sol";
 import './Glossary.sol';
-import './interfaces/IDemiurgeStoreCallback.sol';
 
 import {Errors} from './Errors.sol';
 
-contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCallback {
+// TODO: move to interface
+
+struct NewProposal {
+    uint256 totalVotes;
+    address addrClient;
+    ProposalType proposalType;
+    TvmCell specific;
+    TvmCell codePadawan;
+    TvmCell state;
+}
+
+
+contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCb, IFaucetCb {
     uint8 constant CHECK_PROPOSAL = 1;
     uint8 constant CHECK_PADAWAN = 2;
+
+    uint128 constant TOTAL_EMISSION = 21000000;
 
     uint32 _deployedPadawansCounter = 0;
     uint32 _deployedProposalsCounter = 0;
@@ -24,9 +39,13 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
     address _addrStore;
     address _addrDensRoot;
     address _addrTokenRoot;
-    address _addrFaucetWallet;
+    address _addrFaucet;
 
     uint8 _checkList;
+
+    NewProposal[] public _newProposals;
+    uint8 public _getBalancePendings = 0;
+    uint128 public _totalVotes = 0;
 
     /*
     *  Inline work with checklist
@@ -73,7 +92,7 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
             DemiurgeStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractType.Padawan);
             DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.DensRoot);
             DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
-            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.FaucetTokenWallet);
+            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.Faucet);
         }
 
         _createChecks();
@@ -93,53 +112,73 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
     function deployReserveProposal(
         string title,
         ReserveProposalSpecific specific
-    ) external view onlyContract {
+    ) external onlyContract {
         require(msg.value >= DEPLOY_PROPOSAL_FEE);
         TvmBuilder b;
         b.store(specific);
         TvmCell cellSpecific = b.toCell();
-        _beforeProposalDeploy(title, ProposalType.Reserve, cellSpecific);
+
+        NewProposal _newProposal = NewProposal(
+            0,
+            _addrDensRoot,
+            ProposalType.Reserve,
+            cellSpecific,
+            _codePadawan,
+            _buildProposalState(title)
+        );
+        _newProposals.push(_newProposal);
+        
+        _beforeProposalDeploy(uint8(_newProposals.length - 1));
     }
 
     function _beforeProposalDeploy(
-        string title,
-        ProposalType proposalType,
-        TvmCell specific
-    ) private view {
-        TvmCell state = _buildProposalState(title);
-        uint256 hashState = tvm.hash(state);
+        uint8 i
+    ) private {
+        uint256 hashState = tvm.hash(_newProposals[i].state);
         address addrProposal = address.makeAddrStd(0, hashState);
-        IClient(_addrDensRoot).onProposalDeploy{value: 1 ton, bounce: true}(addrProposal, proposalType, specific);
-        this._deployProposal{value: 4 ton}(title, proposalType, specific);
+        IClient(_addrDensRoot).onProposalDeploy
+            {value: 1 ton, bounce: true}
+            (addrProposal, _newProposals[i].proposalType, _newProposals[i].specific);
+
+        IFaucet(_addrFaucet).getTotalDistributed
+            {value: 0.2 ton, flag: 1, bounce: false}();
+        _getBalancePendings += 1;
     }
 
-    function _deployProposal(
-        string title,
-        ProposalType proposalType,
-        TvmCell specific
-    ) public onlyMe {
-        TvmCell state = _buildProposalState(title);
-        new Proposal {stateInit: state, value: START_BALANCE}(
-            _addrFaucetWallet,
-            _addrDensRoot,
-            proposalType,
-            specific,
-            _codePadawan
-        );
-        _deployedProposalsCounter++;
+    function getTotalDistributedCb(
+        uint128 totalDistributed
+    ) public override {
+        _totalVotes = totalDistributed;
+        _getBalancePendings -= 1;
+        _deployProposals();
+    }
+
+    function _deployProposals() private {
+        if(_getBalancePendings == 0) {
+            for(uint8 i = 0; i < _newProposals.length; i++) {
+                new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
+                    _totalVotes,
+                    _newProposals[i].addrClient,
+                    _newProposals[i].proposalType,
+                    _newProposals[i].specific,
+                    _newProposals[i].codePadawan
+                );
+                _deployedProposalsCounter++;
+            }
+            delete _newProposals;
+        }
     }
 
     // Setters
 
     function updateAddr(ContractAddr kind, address addr) external override onlyStore {
         require(addr != address(0));
-        tvm.accept();
         if (kind == ContractAddr.DensRoot) {
             _addrDensRoot = addr;
         } else if (kind == ContractAddr.TokenRoot) {
             _addrTokenRoot = addr;
-        } else if (kind == ContractAddr.FaucetTokenWallet) {
-            _addrFaucetWallet = addr;
+        } else if (kind == ContractAddr.Faucet) {
+            _addrFaucet = addr;
         }
     }
 
@@ -162,14 +201,14 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCall
         address addrStore,
         address addrDensRoot,
         address addrTokenRoot,
-        address addrFaucetWallet
+        address addrFaucet
     ) {
         codePadawan = _codePadawan;
         codeProposal = _codeProposal;
         addrStore = _addrStore;
         addrDensRoot = _addrDensRoot;
         addrTokenRoot = _addrTokenRoot;
-        addrFaucetWallet = _addrFaucetWallet;
+        addrFaucet = _addrFaucet;
     }
 
     function getStats() public view returns (uint16 version, uint32 deployedPadawansCounter, uint32 deployedProposalsCounter) {

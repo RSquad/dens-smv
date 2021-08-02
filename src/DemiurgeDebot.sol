@@ -14,7 +14,6 @@ import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
 import "./interfaces/IDemiurge.sol";
-import "./interfaces/IDemiurgeStoreCallback.sol";
 import "DemiurgeStore.sol";
 
 
@@ -39,7 +38,7 @@ interface IMultisig {
     external;
 }
 
-contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCallback {
+contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
 
     struct PadawanVotes {
         uint32 reqVotes;
@@ -190,6 +189,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCallback {
             }
         }
         MenuItem[] items;
+        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
         for (uint i = 0; i < _proposals.length; i++) {
             string str;
             str.append(format('{} {} Proposal - {}.',
@@ -212,13 +212,14 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCallback {
     function voteForProposal(uint32 index) public { index;
         if(_addrPadawan == address(0)) {
             attachPadawan();
-        } else if(_addrPadawanTokenWallet != address(0)) {
-            _proposalAddress = address(0);
-            voteForProposal2(index);
         } else {
             _proposalAddress = address(0);
-            getPadawanProposalCb(_addrPadawan);
+            voteForProposal2(index);
         }
+        // else {
+        //     _proposalAddress = address(0);
+        //     getPadawanProposalCb(_addrPadawan);
+        // }
     }
 
     address _proposalAddress;
@@ -283,9 +284,10 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCallback {
         if(proposal.state <= ProposalState.OnVoting) {
             str.append(format('Ends in {} seconds.\n', proposal.end - uint32(now)));
         }
-        str.append(format('Votes for: {}, against: {}, total: 21.000.000\n',
+        str.append(format('Votes for: {}, against: {}, total: {}\n',
             proposal.votesFor,
-            proposal.votesAgainst));
+            proposal.votesAgainst,
+            proposal.totalVotes));
         str.append(format('NIC name to reserve - {}, reservation until {}\n',
             specific.name,
             specific.ts));

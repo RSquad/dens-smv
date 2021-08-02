@@ -15,7 +15,6 @@ import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
 import "./interfaces/IDemiurge.sol";
-import "./interfaces/IDemiurgeStoreCallback.sol";
 import "DemiurgeStore.sol";
 
 
@@ -106,7 +105,7 @@ contract FaucetDebot is Debot, Upgradable {
                 abiVer: 2,
                 extMsg: true,
                 callbackId: tvm.functionId(getFaucetBalanceCb),
-                onErrorId: tvm.functionId(onError),
+                onErrorId: tvm.functionId(onError1),
                 time: 0,
                 expire: 0,
                 pubkey: none,
@@ -158,7 +157,7 @@ contract FaucetDebot is Debot, Upgradable {
                 abiVer: 2,
                 extMsg: true,
                 callbackId: tvm.functionId(getFaucetBalanceCb),
-                onErrorId: tvm.functionId(onError),
+                onErrorId: tvm.functionId(onError1),
                 time: 0,
                 expire: 0,
                 pubkey: none,
@@ -239,184 +238,13 @@ contract FaucetDebot is Debot, Upgradable {
         Terminal.print(0, format("Sdk error {}. Exit code {}.", sdkError, exitCode));
         back();
     }
+
+    function onError1(uint32 sdkError, uint32 exitCode) public {
+        if(exitCode == 101) {
+            Terminal.print(0, "No DeNS Tokens have been allocated to this wallet yet. Contact your Subgovernance for details.");
+        } else {
+            Terminal.print(0, format("Error! Sdk error {}. Exit code {}.", sdkError, exitCode));
+        }
+        back();
+    }
 }
-
-// pragma ton-solidity >=0.43.0;
-// pragma AbiHeader expire;
-// pragma AbiHeader time;
-// pragma AbiHeader pubkey;
-// import "./interfaces/Debot.sol";
-// import "./interfaces/Terminal.sol";
-// import "./interfaces/Menu.sol";
-// import "./interfaces/Msg.sol";
-// import "./interfaces/ConfirmInput.sol";
-// import "./interfaces/AddressInput.sol";
-// import "./interfaces/NumberInput.sol";
-// import "./interfaces/UserInfo.sol";
-// import "./interfaces/AmountInput.sol";
-// import "./interfaces/Sdk.sol";
-// import "./interfaces/Upgradable.sol";
-// import "./interfaces/IDemiurge.sol";
-// import "./interfaces/IDemiurgeStoreCallback.sol";
-// import "DemiurgeStore.sol";
-
-
-// import "./interfaces/ITokenWallet.sol";
-// import "./interfaces/ITokenRoot.sol";
-// import "./interfaces/IFaucet.sol";
-// import "./DemiurgeStore.sol";
-// import "./Base.sol";
-// import "./Padawan.sol";
-// import "./interfaces/IDemiurge.sol";
-// import "./interfaces/IPadawan.sol";
-
-// interface IDemiurgeDebot {
-//     function mainMenu() external;
-// }
-
-// contract FaucetDebot is Debot, Upgradable {
-
-//     address _faucet;
-//     address _addrTokenRoot;
-//     address _TTWRoot;
-//     address _TTWUser;
-//     address _sender;
-//     uint256 _userPubkey;
-
-//     constructor(address faucet, address addrTokenRoot, address TTWRoot) public {
-//         tvm.accept();
-//         _faucet = faucet;
-//         _addrTokenRoot = addrTokenRoot;
-//         _TTWRoot = TTWRoot;
-//     }
-
-//     function getDebotInfo() public functionID(0xDEB) override view returns(
-//         string name,
-//         string version,
-//         string publisher,
-//         string key,
-//         string author,
-//         address support,
-//         string hello,
-//         string language,
-//         string dabi,
-//         bytes icon
-//     ) {
-//         name = "DeNS Faucet Debot";
-//         version = "0.0.1";
-//         publisher = "RSquad";
-//         key = "Voting system for DeNS";
-//         author = "RSquad";
-//         support = address.makeAddrStd(0, 0x0);
-//         hello = "Hello, I'm DeNS Faucet Debot";
-//         language = "en";
-//         dabi = m_debotAbi.get();
-//         icon = "";
-//     }
-
-//     function getRequiredInterfaces() public view override returns (uint256[] interfaces) {
-//         return [ Terminal.ID, Menu.ID, AddressInput.ID, ConfirmInput.ID, UserInfo.ID ];
-//     }
-
-//     function start() public override {
-//         mainMenu();
-//     }
-
-//     function mainMenu() public {
-
-//     }
-
-//     function debotEnterPoint(address sender) public {
-//         _sender = sender;
-//         Terminal.input(tvm.functionId(getWalletAddr), "Enter pubkey:", false);
-//         //AddressInput.get(tvm.functionId(checkTTW), "Enter your TIP-3 wallet address:");
-//     }
-
-    // function getWalletAddr(string value) public {
-    //     (_userPubkey, ) = stoi("0x" + value);
-    //     Terminal.print(0, format("pubkey {}", _userPubkey));
-    //     getWalletAddrCb(_userPubkey);
-    // }
-
-    // function getWalletAddrCb(uint256 value) public {
-    //     ITokenRoot(_addrTokenRoot).getWalletAddress{
-    //         abiVer: 2,
-    //         extMsg: true,
-    //         callbackId: tvm.functionId(checkTTW),
-    //         onErrorId: tvm.functionId(onError),
-    //         time: 0,
-    //         expire: 0,
-    //         sign: false
-    //     }(0, value, 0);
-//     }
-
-//     function deployWallet() public {
-//         ITokenRoot(_addrTokenRoot).deployEmptyWallet{
-//             abiVer: 2,
-//             extMsg: true,
-//             callbackId: tvm.functionId(qwer2),
-//             onErrorId: tvm.functionId(onError),
-//             time: 0,
-//             expire: 0//,
-//             //sign: true            
-//         }(tvm.functionId(qwer), 0, _userPubkey, 0, 3 ton);
-//     }
-
-//     function qwer() public {
-//         Terminal.print(0, "qwer");
-//     }
-
-//     function qwer2(address value) public {
-//         Terminal.print(0, format("{}", value));
-//     }
-
-//     function checkTTW(address value) public {
-//         Terminal.print(0, format("addr {}", value));
-//         _TTWUser = value;
-//         Sdk.getAccountType(tvm.functionId(checkTTWContract), value);
-//     }
-
-//     function checkTTWContract(int8 acc_type) public {
-//         Terminal.print(0, format("status {}", acc_type));
-//         if (acc_type == -1 || acc_type == 0 || acc_type == 2) {
-//             back();
-//             //deployWallet();
-//         } else {
-//             giveToken();
-//         }
-//     }
-
-//     function giveToken() public {
-//         IFaucet(_faucet).giveTokens{
-//             abiVer: 2,
-//             extMsg: true,
-//             callbackId: tvm.functionId(giveTokenCb),
-//             onErrorId: tvm.functionId(onError),
-//             time: 0,
-//             expire: 0,
-//             pubkey: 0,
-//             sign: true
-//         }(_TTWUser);
-//     }
-
-//     function giveTokenCb(bool isInStock) public {
-//         if (isInStock) {
-//           Terminal.print(tvm.functionId(back), "Success!");
-//           return;
-//         }
-//         Terminal.print(tvm.functionId(back), "You have no votes!");
-//     }
-
-//     function back() public {
-//         IDemiurgeDebot(_sender).mainMenu();
-//     }
-
-//     function onCodeUpgrade() internal override {
-//         tvm.resetStorage();
-//     }
-
-//     function onError(uint32 sdkError, uint32 exitCode) public {
-//         Terminal.print(0, format("Sdk error {}. Exit code {}.", sdkError, exitCode));
-//         back();
-//     }
-// }

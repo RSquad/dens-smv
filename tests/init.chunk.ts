@@ -1,4 +1,4 @@
-import { TonClient } from "@tonclient/core";
+import { KeyPair, TonClient } from "@tonclient/core";
 import pkgFaucet from "../ton-packages/Faucet.package";
 import pkgFaucetDebot from "../ton-packages/FaucetDebot.package";
 import pkgTokenRoot from "../ton-packages/RT.package";
@@ -30,6 +30,7 @@ export default async (
   let smcDemiurge: TonContract;
   let smcDemiurgeStore: TonContract;
   let smcDemiurgeDebot: TonContract;
+  let keysTestUser: KeyPair;
 
   /* -------------------------------------------------------------------------- */
   /*                             ANCHOR Init Faucet                             */
@@ -144,18 +145,18 @@ export default async (
 
   fs.writeFileSync("./ftwk", JSON.stringify(smcFaucet.keys));
 
-  let keys = await client.crypto.generate_random_sign_keys();
+  keysTestUser = await client.crypto.generate_random_sign_keys();
   await smcFaucet.call({
     functionName: "changeBalance",
     input: {
-      pubkey: `0x${keys.public}`,
+      pubkey: `0x${keysTestUser.public}`,
       value: 1000,
     },
   });
 
   logPubGetter("Faucet balances updated", smcFaucet, "_balances");
 
-  fs.writeFileSync("./k1", JSON.stringify(keys));
+  fs.writeFileSync("./k1", JSON.stringify(keysTestUser));
 
   /* -------------------------------------------------------------------------- */
   /*                          ANCHOR Deploy FaucetDebot                         */
@@ -246,8 +247,8 @@ export default async (
     input: { addr: smcTokenRoot.address },
   });
   await smcDemiurgeStore.call({
-    functionName: "setFaucetTokenWalletAddr",
-    input: { addr: smcFaucetTokenWallet.address },
+    functionName: "setFaucetAddr",
+    input: { addr: smcFaucet.address },
   });
 
   let codes = Object.values(
@@ -295,7 +296,7 @@ export default async (
   console.log(`Demiurge address: ${smcDemiurge.address}`);
 
   if (process.env.NETWORK !== "LOCAL") {
-    await sleep(30000);
+    await sleep(20000);
   }
 
   const stored = (await smcDemiurge.run({ functionName: "getStored" })).value;
@@ -311,7 +312,7 @@ export default async (
   /*                         ANCHOR Deploy DemiurgeDebot                        */
   /* -------------------------------------------------------------------------- */
 
-  keys = await client.crypto.generate_random_sign_keys();
+  let keys = await client.crypto.generate_random_sign_keys();
   smcDemiurgeDebot = new TonContract({
     client,
     name: "DemiurgeDebot",
@@ -334,7 +335,7 @@ export default async (
   });
 
   if (process.env.NETWORK !== "LOCAL") {
-    await sleep(30000);
+    await sleep(20000);
   }
 
   await smcDemiurgeDebot.deploy({
@@ -375,12 +376,17 @@ export default async (
   );
 
   return {
-    smcTokenRoot,
-    smcFaucetTokenWallet,
-    smcFaucet,
-    smcFaucetDebot,
-    smcDemiurge,
-    smcDemiurgeStore,
-    smcDemiurgeDebot,
+    contracts: {
+      smcTokenRoot,
+      smcFaucetTokenWallet,
+      smcFaucet,
+      smcFaucetDebot,
+      smcDemiurge,
+      smcDemiurgeStore,
+      smcDemiurgeDebot,
+    },
+    keys: {
+      keysTestUser,
+    },
   };
 };
