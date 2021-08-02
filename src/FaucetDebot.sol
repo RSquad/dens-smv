@@ -105,7 +105,7 @@ contract FaucetDebot is Debot, Upgradable {
                 abiVer: 2,
                 extMsg: true,
                 callbackId: tvm.functionId(getFaucetBalanceCb),
-                onErrorId: tvm.functionId(onError),
+                onErrorId: tvm.functionId(onError1),
                 time: 0,
                 expire: 0,
                 pubkey: none,
@@ -157,7 +157,7 @@ contract FaucetDebot is Debot, Upgradable {
                 abiVer: 2,
                 extMsg: true,
                 callbackId: tvm.functionId(getFaucetBalanceCb),
-                onErrorId: tvm.functionId(onError),
+                onErrorId: tvm.functionId(onError1),
                 time: 0,
                 expire: 0,
                 pubkey: none,
@@ -236,6 +236,15 @@ contract FaucetDebot is Debot, Upgradable {
 
     function onError(uint32 sdkError, uint32 exitCode) public {
         Terminal.print(0, format("Sdk error {}. Exit code {}.", sdkError, exitCode));
+        back();
+    }
+
+    function onError1(uint32 sdkError, uint32 exitCode) public {
+        if(exitCode == 101) {
+            Terminal.print(0, "No DeNS Tokens have been allocated to this wallet yet. Contact your Subgovernance for details.");
+        } else {
+            Terminal.print(0, format("Error! Sdk error {}. Exit code {}.", sdkError, exitCode));
+        }
         back();
     }
 }
