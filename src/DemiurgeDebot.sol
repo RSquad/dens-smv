@@ -189,6 +189,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
             }
         }
         MenuItem[] items;
+        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
         for (uint i = 0; i < _proposals.length; i++) {
             string str;
             str.append(format('{} {} Proposal - {}.',
