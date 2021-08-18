@@ -12,13 +12,13 @@ import {
 describe("Proposal test", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
-  let smcDemiurgeStore: TonContract;
-  let smcDemiurge: TonContract;
+  let smcSmvRootStore: TonContract;
+  let smcSmvRoot: TonContract;
   let smcTokenRoot: TonContract;
   let smcFaucetTokenWallet: TonContract;
   let smcFaucetDebot: TonContract;
   let smcFaucet: TonContract;
-  let smcDemiurgeDebot: TonContract;
+  let smcSmvDebot: TonContract;
   let smcReserveProposal: TonContract;
 
   before(async () => {
@@ -37,13 +37,13 @@ describe("Proposal test", () => {
 
   it("init system", async () => {
     const { contracts } = await initChunk(client, smcSafeMultisigWallet);
-    smcDemiurgeStore = contracts.smcDemiurgeStore;
-    smcDemiurge = contracts.smcDemiurge;
+    smcSmvRootStore = contracts.smcSmvRootStore;
+    smcSmvRoot = contracts.smcSmvRoot;
     smcTokenRoot = contracts.smcTokenRoot;
     smcFaucetTokenWallet = contracts.smcFaucetTokenWallet;
     smcFaucetDebot = contracts.smcFaucetDebot;
     smcFaucet = contracts.smcFaucet;
-    smcDemiurgeDebot = contracts.smcDemiurgeDebot;
+    smcSmvDebot = contracts.smcSmvDebot;
   });
 
   it("deploy ReserveProposal", async () => {
@@ -52,7 +52,7 @@ describe("Proposal test", () => {
     await callThroughMultisig({
       client,
       smcSafeMultisigWallet,
-      abi: smcDemiurge.tonPackage.abi,
+      abi: smcSmvRoot.tonPackage.abi,
       functionName: "deployReserveProposal",
       input: {
         title,
@@ -61,12 +61,12 @@ describe("Proposal test", () => {
           ts: 100000,
         },
       },
-      dest: smcDemiurge.address,
+      dest: smcSmvRoot.address,
       value: 8_000_000_000,
     });
 
     const addrProposal = (
-      await smcDemiurge.run({
+      await smcSmvRoot.run({
         functionName: "resolveProposal",
         input: {
           title,
@@ -76,7 +76,7 @@ describe("Proposal test", () => {
 
     await waitForMessage(
       client,
-      { src: { eq: smcDemiurge.address }, dst: { eq: addrProposal } },
+      { src: { eq: smcSmvRoot.address }, dst: { eq: addrProposal } },
       "id"
     );
 
@@ -94,7 +94,7 @@ describe("Proposal test", () => {
       smcReserveProposal,
       "_proposalInfo"
     );
-    await logPubGetter("smcDemiurge _totalVotes", smcDemiurge, "_totalVotes");
+    await logPubGetter("smcSmvRoot _totalVotes", smcSmvRoot, "_totalVotes");
     await logPubGetter(
       "smcFaucet _totalDistributed",
       smcFaucet,

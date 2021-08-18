@@ -5,11 +5,11 @@ pragma AbiHeader time;
 import "./resolvers/PadawanResolver.sol";
 import "./resolvers/ProposalResolver.sol";
 import "./Proposal.sol";
-import "./DemiurgeStore.sol";
+import "./SmvRootStore.sol";
 import "./interfaces/IProposal.sol";
 import "./interfaces/IClient.sol";
 import "./interfaces/IFaucet.sol";
-import "./interfaces/IDemiurge.sol";
+import "./interfaces/ISmvRoot.sol";
 import './Glossary.sol';
 
 import {Errors} from './Errors.sol';
@@ -26,7 +26,7 @@ struct NewProposal {
 }
 
 
-contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCb, IFaucetCb {
+contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IFaucetCb {
     uint8 constant CHECK_PROPOSAL = 1;
     uint8 constant CHECK_PADAWAN = 2;
 
@@ -88,11 +88,11 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCb, 
         
         if (addrStore != address(0)) {
             _addrStore = addrStore;
-            DemiurgeStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractType.Proposal);
-            DemiurgeStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractType.Padawan);
-            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.DensRoot);
-            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
-            DemiurgeStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.Faucet);
+            SmvRootStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
+            SmvRootStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
+            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.DensRoot);
+            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
+            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.Faucet);
         }
 
         _createChecks();
@@ -182,12 +182,12 @@ contract Demiurge is Base, PadawanResolver, ProposalResolver, IDemiurgeStoreCb, 
         }
     }
 
-    function updateCode(ContractType kind, TvmCell code) external override onlyStore {
+    function updateCode(ContractCode kind, TvmCell code) external override onlyStore {
         tvm.accept();
-        if (kind == ContractType.Proposal) {
+        if (kind == ContractCode.Proposal) {
             _codeProposal = code;
             _passCheck(CHECK_PROPOSAL);
-        } else if (kind == ContractType.Padawan) {
+        } else if (kind == ContractCode.Padawan) {
             _codePadawan = code;
             _passCheck(CHECK_PADAWAN);
         }

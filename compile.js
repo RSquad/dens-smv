@@ -1,11 +1,11 @@
 const { compile } = require("@rsquad/ton-utils");
 
 compile([
-  "Demiurge",
+  "SmvRoot",
   "Padawan",
   "Proposal",
-  "DemiurgeStore",
-  "DemiurgeDebot",
+  "SmvRootStore",
+  "SmvDebot",
   "Faucet",
   "FaucetDebot",
 ]);

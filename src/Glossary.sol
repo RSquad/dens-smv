@@ -30,17 +30,3 @@ enum ProposalState {
     Reserved,
     Last
 }
-
-enum ContractType {
-    Demiurge,
-    Proposal,
-    Padawan,
-    DemiurgeDebot,
-    VotingDebot
-}
-
-enum ContractAddr {
-    DensRoot,
-    TokenRoot,
-    Faucet
-}

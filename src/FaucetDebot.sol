@@ -14,20 +14,20 @@ import "./interfaces/UserInfo.sol";
 import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
-import "./interfaces/IDemiurge.sol";
-import "DemiurgeStore.sol";
+import "./interfaces/ISmvRoot.sol";
+import "SmvRootStore.sol";
 
 
 import "./interfaces/ITokenWallet.sol";
 import "./interfaces/ITokenRoot.sol";
 import "./interfaces/IFaucet.sol";
-import "./DemiurgeStore.sol";
+import "./SmvRootStore.sol";
 import "./Base.sol";
 import "./Padawan.sol";
-import "./interfaces/IDemiurge.sol";
+import "./interfaces/ISmvRoot.sol";
 import "./interfaces/IPadawan.sol";
 
-interface IDemiurgeDebot {
+interface ISmvDebot {
     function mainMenu() external;
 }
 
@@ -37,7 +37,7 @@ contract FaucetDebot is Debot, Upgradable {
     address _addrTokenRoot;
     address _addrFaucetTokenWallet;
 
-    address _addrDemiurgeDebot;
+    address _addrSmvDebot;
 
     uint256 _userPubkey;
     address _addrUserTokenWallet;
@@ -115,7 +115,7 @@ contract FaucetDebot is Debot, Upgradable {
     }
 
     function debotEnterPoint(address sender) public {
-        _addrDemiurgeDebot = sender;
+        _addrSmvDebot = sender;
         Terminal.input(tvm.functionId(getTokenWalletAddr), "Enter pubkey:", false);
     }
 
@@ -227,7 +227,7 @@ contract FaucetDebot is Debot, Upgradable {
     // refactor
 
     function back() public {
-        IDemiurgeDebot(_addrDemiurgeDebot).mainMenu();
+        ISmvDebot(_addrSmvDebot).mainMenu();
     }
 
     function onCodeUpgrade() internal override {

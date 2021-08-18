@@ -1,5 +1,5 @@
 import { TonClient } from "@tonclient/core";
-import pkgDemiurgeDebot from "../../ton-packages/DemiurgeDebot.package";
+import pkgSmvDebot from "../../ton-packages/SmvDebot.package";
 import { sleep, TonContract } from "@rsquad/ton-utils";
 import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
@@ -10,30 +10,30 @@ import { NETWORK_MAP } from "@rsquad/ton-utils/dist/constants";
 export default async (
   client: TonClient,
   smcSafeMultisigWallet: TonContract,
-  smcDemiurgeDebot: TonContract,
-  smcDemiurge: TonContract,
-  smcDemiurgeStore: TonContract,
+  smcSmvDebot: TonContract,
+  smcSmvRoot: TonContract,
+  smcSmvRootStore: TonContract,
   smcFaucetDebot: TonContract
 ) => {
   const keys = await client.crypto.generate_random_sign_keys();
-  smcDemiurgeDebot = new TonContract({
+  smcSmvDebot = new TonContract({
     client,
-    name: "DemiurgeDebot",
-    tonPackage: pkgDemiurgeDebot,
+    name: "SmvDebot",
+    tonPackage: pkgSmvDebot,
     keys,
   });
 
   fs.writeFileSync("./dk", JSON.stringify(keys));
 
-  await smcDemiurgeDebot.calcAddress();
+  await smcSmvDebot.calcAddress();
 
-  console.log(`DemiurgeDebot deploy: ${smcDemiurgeDebot.address}`);
-  console.log(`public: ${smcDemiurgeDebot.keys.public}`);
-  console.log(`secret: ${smcDemiurgeDebot.keys.secret}`);
+  console.log(`SmvDebot deploy: ${smcSmvDebot.address}`);
+  console.log(`public: ${smcSmvDebot.keys.public}`);
+  console.log(`secret: ${smcSmvDebot.keys.secret}`);
 
   await sendThroughMultisig({
     smcSafeMultisigWallet,
-    dest: smcDemiurgeDebot.address,
+    dest: smcSmvDebot.address,
     value: 100_000_000_000,
   });
 
@@ -41,17 +41,17 @@ export default async (
     await sleep(30000);
   }
 
-  await smcDemiurgeDebot.deploy({
+  await smcSmvDebot.deploy({
     input: {
-      demiurge: smcDemiurge.address,
-      store: smcDemiurgeStore.address,
+      SmvRoot: smcSmvRoot.address,
+      store: smcSmvRootStore.address,
       faucetDebot: smcFaucetDebot.address,
     },
   });
 
   await new Promise<void>((resolve) => {
     fs.readFile(
-      "./build/DemiurgeDebot.abi.json",
+      "./build/SmvDebot.abi.json",
       "utf8",
       async function (err, data) {
         if (err) {
@@ -60,7 +60,7 @@ export default async (
         const buf = Buffer.from(data, "ascii");
         var hexvalue = buf.toString("hex");
 
-        await smcDemiurgeDebot.call({
+        await smcSmvDebot.call({
           functionName: "setABI",
           input: {
             dabi: hexvalue,
@@ -72,17 +72,14 @@ export default async (
     );
   });
 
-  const isSmcDemiurgeDebotActive = await isAddrActive(
-    client,
-    smcDemiurgeDebot.address
-  );
-  expect(isSmcDemiurgeDebotActive).to.be.true;
+  const isSmcSmvDebotActive = await isAddrActive(client, smcSmvDebot.address);
+  expect(isSmcSmvDebotActive).to.be.true;
 
   console.log(
     `tonos-cli --url ${NETWORK_MAP[process.env.NETWORK][0]} debot fetch ${
-      smcDemiurgeDebot.address
+      smcSmvDebot.address
     }`
   );
 
-  return { smcDemiurgeDebot };
+  return { smcSmvDebot };
 };

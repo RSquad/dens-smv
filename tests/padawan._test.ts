@@ -13,13 +13,13 @@ import { expect } from "chai";
 describe("Padawan test", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
-  let smcDemiurgeStore: TonContract;
-  let smcDemiurge: TonContract;
+  let smcSmvRootStore: TonContract;
+  let smcSmvRoot: TonContract;
   let smcTokenRoot: TonContract;
   let smcFaucetTokenWallet: TonContract;
   let smcFaucetDebot: TonContract;
   let smcFaucet: TonContract;
-  let smcDemiurgeDebot: TonContract;
+  let smcSmvDebot: TonContract;
   let smcPadawan: TonContract;
   let smcUserTokenWallet: TonContract;
   let keysTestUser: KeyPair;
@@ -40,13 +40,13 @@ describe("Padawan test", () => {
 
   it("init system", async () => {
     const { contracts, keys } = await initChunk(client, smcSafeMultisigWallet);
-    smcDemiurgeStore = contracts.smcDemiurgeStore;
-    smcDemiurge = contracts.smcDemiurge;
+    smcSmvRootStore = contracts.smcSmvRootStore;
+    smcSmvRoot = contracts.smcSmvRoot;
     smcTokenRoot = contracts.smcTokenRoot;
     smcFaucetTokenWallet = contracts.smcFaucetTokenWallet;
     smcFaucetDebot = contracts.smcFaucetDebot;
     smcFaucet = contracts.smcFaucet;
-    smcDemiurgeDebot = contracts.smcDemiurgeDebot;
+    smcSmvDebot = contracts.smcSmvDebot;
     keysTestUser = keys.keysTestUser;
   });
 
@@ -54,17 +54,17 @@ describe("Padawan test", () => {
     await callThroughMultisig({
       client,
       smcSafeMultisigWallet,
-      abi: smcDemiurge.tonPackage.abi,
+      abi: smcSmvRoot.tonPackage.abi,
       functionName: "deployPadawan",
       input: {
         owner: smcSafeMultisigWallet.address,
       },
-      dest: smcDemiurge.address,
+      dest: smcSmvRoot.address,
       value: 6_000_000_000,
     });
 
     const addrPadawan = (
-      await smcDemiurge.run({
+      await smcSmvRoot.run({
         functionName: "resolvePadawan",
         input: {
           owner: smcSafeMultisigWallet.address,
@@ -74,7 +74,7 @@ describe("Padawan test", () => {
 
     await waitForMessage(
       client,
-      { src: { eq: smcDemiurge.address }, dst: { eq: addrPadawan } },
+      { src: { eq: smcSmvRoot.address }, dst: { eq: addrPadawan } },
       "id"
     );
 

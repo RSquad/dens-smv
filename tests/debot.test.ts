@@ -6,20 +6,20 @@ import deployTokenRootChunk from "./chunks/deploy-token-root.chunk";
 import deployFaucetTokenWalletChunk from "./chunks/deploy-faucet-token-wallet.chunk";
 import deployFaucetChunk from "./chunks/deploy-faucet.chunk";
 import deployFaucetDebotChunk from "./chunks/deploy-faucet-debot.chunk";
-import deployDemiurgeStoreChunk from "./chunks/deploy-demiurge-store.chunk";
-import deployDemiurgeChunk from "./chunks/deploy-demiurge.chunk";
-import deployDemiurgeDebotChunk from "./chunks/deploy-demiurge-debot.chunk";
+import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
+import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
+import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
 
 describe("Debot test", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
-  let smcDemiurgeStore: TonContract;
-  let smcDemiurge: TonContract;
+  let smcSmvRootStore: TonContract;
+  let smcSmvRoot: TonContract;
   let smcTokenRoot: TonContract;
   let smcFaucetTokenWallet: TonContract;
   let smcFaucetDebot: TonContract;
   let smcFaucet: TonContract;
-  let smcDemiurgeDebot: TonContract;
+  let smcSmvDebot: TonContract;
 
   before(async () => {
     client = createClient();
@@ -76,32 +76,32 @@ describe("Debot test", () => {
     );
   });
 
-  it("deploys and inits DemiurgeStore", async () => {
-    const result = await deployDemiurgeStoreChunk(
+  it("deploys and inits SmvRootStore", async () => {
+    const result = await deploySmvRootStoreChunk(
       client,
       smcSafeMultisigWallet,
       smcFaucet,
       smcTokenRoot
     );
-    smcDemiurgeStore = result.smcDemiurgeStore;
+    smcSmvRootStore = result.smcSmvRootStore;
   });
 
-  it("deploys and inits Demiurge", async () => {
-    const result = await deployDemiurgeChunk(
+  it("deploys and inits SmvRoot", async () => {
+    const result = await deploySmvRootChunk(
       client,
       smcSafeMultisigWallet,
-      smcDemiurgeStore
+      smcSmvRootStore
     );
-    smcDemiurge = result.smcDemiurge;
+    smcSmvRoot = result.smcSmvRoot;
   });
 
-  it("deploys and inits DemiurgeDebot", async () => {
-    await deployDemiurgeDebotChunk(
+  it("deploys and inits SmvDebot", async () => {
+    await deploySmvDebotChunk(
       client,
       smcSafeMultisigWallet,
-      smcDemiurgeDebot,
-      smcDemiurge,
-      smcDemiurgeStore,
+      smcSmvDebot,
+      smcSmvRoot,
+      smcSmvRootStore,
       smcFaucetDebot
     );
   });
