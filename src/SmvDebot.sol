@@ -178,16 +178,17 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     }
 
     function setProposal(ProposalInfo proposal) public {
+        // Terminal.print(0, format("DEBUG: setProposal title {}", proposal.title));
         _proposals.push(proposal);
     }
 
     function printProposalsMenu() public {
-        for (uint i = 0; i < _proposals.length; i++) {
-            if(_proposals[i].state > ProposalState.OnVoting) {
-                delete _proposals[i];
-                delete _proposalAddresses[i];
-            }
-        }
+        // for (uint i = 0; i < _proposals.length; i++) {
+        //     if(_proposals[i].state > ProposalState.OnVoting) {
+        //         delete _proposals[i];
+        //         delete _proposalAddresses[i];
+        //     }
+        // }
         MenuItem[] items;
         items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
         for (uint i = 0; i < _proposals.length; i++) {
@@ -196,7 +197,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
                 _proposals[i].title,
                 proposalTypeToString(_proposals[i].proposalType),
                 proposalStateToString(_proposals[i].state)));
-            if(_proposals[i].state <= ProposalState.OnVoting) {
+            if(_proposals[i].state <= ProposalState.OnVoting && int256(int256(_proposals[i].end - uint32(now))) > 0) {
                 str.append(format(' Ends in {} seconds.', _proposals[i].end - uint32(now)));
             }
             items.push(MenuItem(str, "", tvm.functionId(voteForProposal)));
@@ -281,8 +282,8 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             proposal.title,
             proposalTypeToString(proposal.proposalType),
             proposalStateToString(proposal.state)));
-        if(proposal.state <= ProposalState.OnVoting) {
-            str.append(format('Ends in {} seconds.\n', proposal.end - uint32(now)));
+        if(proposal.state <= ProposalState.OnVoting && int256(int256(proposal.end - uint32(now))) > 0) {
+            str.append(format(' Ends in {} seconds.', proposal.end - uint32(now)));
         }
         str.append(format('Votes for: {}, against: {}, total: {}\n',
             proposal.votesFor,

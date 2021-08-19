@@ -20,7 +20,7 @@ contract Padawan is Base {
 
     address _addrTokenRoot;
 
-    TipAccount _tipAccount;
+    TipAccount public _tipAccount;
     address _returnTo;
 
     mapping(address => uint32) _activeProposals;
