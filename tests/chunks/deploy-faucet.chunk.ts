@@ -15,7 +15,7 @@ export default async (
   await sendThroughMultisig({
     smcSafeMultisigWallet,
     dest: smcFaucet.address,
-    value: 3_000_000_000,
+    value: 20_000_000_000,
   });
 
   await smcFaucet.deploy({

@@ -467,8 +467,10 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         _userTokenWallet = value;
         callTonTokenWalletGetBalance(tvm.functionId(setFromBalance), tvm.functionId(setTip3WalletError));
     }
-    function setFromBalance(uint128 value0) public {
-        _balanceTIP3 = value0;
+    function setFromBalance(
+        uint128 balance
+    ) public {
+        _balanceTIP3 = balance;
         AmountInput.get(tvm.functionId(transferTokens), "How many tokens to deposit?", 0, 0, _balanceTIP3);
     }
     function setTip3WalletError(uint128 value0) public { value0;
@@ -608,7 +610,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             time: uint32(now),
             expire: 0,
             pubkey: none
-        }(_addrPadawanTokenWallet, tokens, value);
+        }(_addrPadawanTokenWallet, _addrPadawanTokenWallet, tokens, value, false);
     }
 
     

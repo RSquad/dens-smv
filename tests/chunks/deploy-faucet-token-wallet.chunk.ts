@@ -26,10 +26,9 @@ export default async (
   const deployFaucetTokenWallet = await smcTokenRoot.call({
     functionName: "deployWallet",
     input: {
-      _answer_id: 1,
-      workchain_id: 0,
+      _answer_id: 0,
       pubkey: 0,
-      internal_owner: `0x${smcFaucet.address.slice(2)}`,
+      internal_owner: smcFaucet.address,
       tokens: 21000000,
       grams: 1_000_000_000,
     },

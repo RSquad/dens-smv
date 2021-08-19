@@ -9,8 +9,13 @@ import deployFaucetDebotChunk from "./chunks/deploy-faucet-debot.chunk";
 import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
 import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
 import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
+import * as fs from "fs";
+import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
+import { isAddrActive } from "./utils";
+import { expect } from "chai";
+import { callThroughMultisig } from "@rsquad/ton-utils/dist/net";
 
-describe("Debot test", () => {
+describe("Faucet test", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
   let smcSmvRootStore: TonContract;
@@ -65,17 +70,6 @@ describe("Debot test", () => {
     );
   });
 
-  it("deploys and inits FaucetDeBot", async () => {
-    await deployFaucetDebotChunk(
-      client,
-      smcSafeMultisigWallet,
-      smcFaucetDebot,
-      smcFaucet,
-      smcTokenRoot,
-      smcFaucetTokenWallet
-    );
-  });
-
   it("deploys and inits SmvRootStore", async () => {
     const result = await deploySmvRootStoreChunk(
       client,
@@ -95,14 +89,65 @@ describe("Debot test", () => {
     smcSmvRoot = result.smcSmvRoot;
   });
 
-  it("deploys and inits SmvDebot", async () => {
-    await deploySmvDebotChunk(
+  // it("deploys UserTokenWallet throught Faucet", async () => {
+  //   const raw = fs.readFileSync("./k1");
+  //   await smcFaucet.call({
+  //     functionName: "deployWallet",
+  //     keys: JSON.parse(raw as any),
+  //   });
+
+  //   const addrUserTokenWallet = (
+  //     await smcTokenRoot.run({
+  //       functionName: "getWalletAddress",
+  //       input: {
+  //         pubkey: `0x${JSON.parse(raw as any).public}`,
+  //         owner: EMPTY_ADDRESS,
+  //       },
+  //     })
+  //   ).value.value0;
+
+  //   const isUserTokenWalletActive = await isAddrActive(
+  //     client,
+  //     addrUserTokenWallet
+  //   );
+  //   expect(isUserTokenWalletActive, "UserTokenWallet not active").to.be.true;
+
+  //   console.log(`UserTokenWallet deployed: ${addrUserTokenWallet}`);
+  // });
+
+  it("deploys UserTokenWallet throught Multisig", async () => {
+    const raw = fs.readFileSync("./k1");
+    await callThroughMultisig({
       client,
       smcSafeMultisigWallet,
-      smcSmvDebot,
-      smcSmvRoot,
-      smcSmvRootStore,
-      smcFaucetDebot
+      abi: smcTokenRoot.tonPackage.abi,
+      functionName: "deployEmptyWallet",
+      input: {
+        _answer_id: 0,
+        pubkey: `0x${JSON.parse(raw as any).public}`,
+        internal_owner: EMPTY_ADDRESS,
+        grams: 3_000_000_000,
+      },
+      dest: smcTokenRoot.address,
+      value: 10_000_000_000,
+    });
+
+    const addrUserTokenWallet = (
+      await smcTokenRoot.run({
+        functionName: "getWalletAddress",
+        input: {
+          pubkey: `0x${JSON.parse(raw as any).public}`,
+          owner: EMPTY_ADDRESS,
+        },
+      })
+    ).value.value0;
+
+    const isUserTokenWalletActive = await isAddrActive(
+      client,
+      addrUserTokenWallet
     );
+    expect(isUserTokenWalletActive, "UserTokenWallet not active").to.be.true;
+
+    console.log(`UserTokenWallet deployed: ${addrUserTokenWallet}`);
   });
 });

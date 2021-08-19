@@ -30,7 +30,9 @@ contract Faucet is Base, IFaucet {
         tvm.accept();
 
         _totalDistributed = _balances[msg.pubkey()];
-        ITokenWallet(_addrTokenWallet).transfer(addrTokenWallet, _balances[msg.pubkey()], 0.1 ton);
+        ITokenWallet(_addrTokenWallet).transfer
+            {value: 0.5 ton, flag: 1, bounce: false}
+            (address(this), addrTokenWallet, _balances[msg.pubkey()], 0.2 ton, false);
 
         delete _balances[msg.pubkey()];
     }
@@ -51,8 +53,8 @@ contract Faucet is Base, IFaucet {
         tvm.accept();
 
         ITokenRoot(_addrTokenRoot).deployEmptyWallet
-            {value: 0.5 ton, flag: 1, bounce: true}
-            (0, 0, msg.pubkey(), 0, 0.25 ton);
+            {value: 1 ton, flag: 1, bounce: true}
+            (0, msg.pubkey(), address(0), 0.5 ton);
     }
 
     function getBalance(uint256 userPubkey) external override returns (uint32 balance) {
