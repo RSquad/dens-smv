@@ -226,8 +226,8 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     bool _proposalChoice;
 
     function voteForProposal2(uint32 i) public {
-        printProposal(_proposals[i]);
-        _proposalAddress = _proposalAddresses[i];
+        printProposal(_proposals[i - 1]);
+        _proposalAddress = _proposalAddresses[i - 1];
         Terminal.print(0, format("Your votes:\ntotal: {}, locked: {}",
             _padawanVotes.totalVotes,
             _padawanVotes.lockedVotes
