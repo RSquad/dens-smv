@@ -38,7 +38,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
         _proposalInfo.end = uint32(now + 60 * 60 * 24 * 7);
         _proposalInfo.proposalType = proposalType;
         _proposalInfo.specific = specific;
-        _proposalInfo.state = ProposalState.New;
+        _proposalInfo.state = ProposalState.OnVoting;
         _proposalInfo.totalVotes = totalVotes;
 
         _codePadawan = codePadawan;
@@ -101,7 +101,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
     function _tryEarlyComplete(
         uint32 yes,
         uint32 no
-    ) private view returns (bool, bool) {
+    ) private view inline returns (bool, bool) {
         (bool completed, bool passed) = (false, false);
         if (yes * 2 > _proposalInfo.totalVotes) {
             completed = true;

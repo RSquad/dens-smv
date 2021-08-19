@@ -13,15 +13,15 @@ import "./interfaces/UserInfo.sol";
 import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
-import "./interfaces/IDemiurge.sol";
-import "DemiurgeStore.sol";
+import "./interfaces/ISmvRoot.sol";
+import "SmvRootStore.sol";
 
 
 import "./interfaces/ITokenWallet.sol";
-import "./DemiurgeStore.sol";
+import "./SmvRootStore.sol";
 import "./Base.sol";
 import "./Padawan.sol";
-import "./interfaces/IDemiurge.sol";
+import "./interfaces/ISmvRoot.sol";
 import "./interfaces/IPadawan.sol";
 
 interface IFaucetDebot {
@@ -38,7 +38,7 @@ interface IMultisig {
     external;
 }
 
-contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
+contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
 
     struct PadawanVotes {
         uint32 reqVotes;
@@ -47,7 +47,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
     }
     
     address _store;
-    address _demiurge;
+    address _SmvRoot;
     address _multisig;
     address _faucetDebot;
 
@@ -80,14 +80,14 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
         _;
     }
 
-    constructor(address demiurge, address store, address faucetDebot) public {
+    constructor(address SmvRoot, address store, address faucetDebot) public {
         tvm.accept();
-        _demiurge = demiurge;
+        _SmvRoot = SmvRoot;
         _store = store;
         _faucetDebot = faucetDebot;
-        DemiurgeStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractType.Proposal);
-        DemiurgeStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractType.Padawan);
-        DemiurgeStore(store).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
+        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
+        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
+        SmvRootStore(store).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -178,16 +178,17 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
     }
 
     function setProposal(ProposalInfo proposal) public {
+        // Terminal.print(0, format("DEBUG: setProposal title {}", proposal.title));
         _proposals.push(proposal);
     }
 
     function printProposalsMenu() public {
-        for (uint i = 0; i < _proposals.length; i++) {
-            if(_proposals[i].state > ProposalState.OnVoting) {
-                delete _proposals[i];
-                delete _proposalAddresses[i];
-            }
-        }
+        // for (uint i = 0; i < _proposals.length; i++) {
+        //     if(_proposals[i].state > ProposalState.OnVoting) {
+        //         delete _proposals[i];
+        //         delete _proposalAddresses[i];
+        //     }
+        // }
         MenuItem[] items;
         items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
         for (uint i = 0; i < _proposals.length; i++) {
@@ -196,7 +197,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
                 _proposals[i].title,
                 proposalTypeToString(_proposals[i].proposalType),
                 proposalStateToString(_proposals[i].state)));
-            if(_proposals[i].state <= ProposalState.OnVoting) {
+            if(_proposals[i].state <= ProposalState.OnVoting && int256(int256(_proposals[i].end - uint32(now))) > 0) {
                 str.append(format(' Ends in {} seconds.', _proposals[i].end - uint32(now)));
             }
             items.push(MenuItem(str, "", tvm.functionId(voteForProposal)));
@@ -226,8 +227,8 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
     bool _proposalChoice;
 
     function voteForProposal2(uint32 i) public {
-        printProposal(_proposals[i]);
-        _proposalAddress = _proposalAddresses[i];
+        printProposal(_proposals[i - 1]);
+        _proposalAddress = _proposalAddresses[i - 1];
         Terminal.print(0, format("Your votes:\ntotal: {}, locked: {}",
             _padawanVotes.totalVotes,
             _padawanVotes.lockedVotes
@@ -281,8 +282,8 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
             proposal.title,
             proposalTypeToString(proposal.proposalType),
             proposalStateToString(proposal.state)));
-        if(proposal.state <= ProposalState.OnVoting) {
-            str.append(format('Ends in {} seconds.\n', proposal.end - uint32(now)));
+        if(proposal.state <= ProposalState.OnVoting && int256(int256(proposal.end - uint32(now))) > 0) {
+            str.append(format(' Ends in {} seconds.', proposal.end - uint32(now)));
         }
         str.append(format('Votes for: {}, against: {}, total: {}\n',
             proposal.votesFor,
@@ -365,7 +366,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
     }
     function createReserveProposalSign(bool value) public {
         if(value) {
-            TvmCell payload = tvm.encodeBody(IDemiurge.deployReserveProposal, _newReserveProposal.title, _newReserveProposal.specific);
+            TvmCell payload = tvm.encodeBody(ISmvRoot.deployReserveProposal, _newReserveProposal.title, _newReserveProposal.specific);
             optional(uint256) none;
             IMultisig(_multisig).sendTransaction{
                 abiVer: 2,
@@ -376,7 +377,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
                 expire: 0,
                 callbackId: tvm.functionId(createReserveProposalOnSuccess),
                 onErrorId: tvm.functionId(onError)
-            }(_demiurge, 8 ton, false, 3, payload);
+            }(_SmvRoot, 8 ton, false, 3, payload);
         } else {
             mainMenu();
         }
@@ -418,7 +419,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
         }
     }
     function resolvePadawan() public view {
-        IDemiurge(_demiurge).resolvePadawan{
+        ISmvRoot(_SmvRoot).resolvePadawan{
             abiVer: 2,
             extMsg: true,
             callbackId: tvm.functionId(setPadawanAddress),
@@ -443,7 +444,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
     }
 
     function createPadawan(uint32 index) public view { index;
-        TvmCell payload = tvm.encodeBody(IDemiurge.deployPadawan, _multisig);
+        TvmCell payload = tvm.encodeBody(ISmvRoot.deployPadawan, _multisig);
         optional(uint256) none;
         IMultisig(_multisig).sendTransaction{
             abiVer: 2,
@@ -454,7 +455,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
             expire: 0,
             callbackId: tvm.functionId(resolvePadawan),
             onErrorId: tvm.functionId(onError)
-        }(_demiurge, 6 ton, false, 3, payload);
+        }(_SmvRoot, 6 ton, false, 3, payload);
     }
 
     function depositTokens(uint32 index) public { index;
@@ -467,8 +468,10 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
         _userTokenWallet = value;
         callTonTokenWalletGetBalance(tvm.functionId(setFromBalance), tvm.functionId(setTip3WalletError));
     }
-    function setFromBalance(uint128 value0) public {
-        _balanceTIP3 = value0;
+    function setFromBalance(
+        uint128 balance
+    ) public {
+        _balanceTIP3 = balance;
         AmountInput.get(tvm.functionId(transferTokens), "How many tokens to deposit?", 0, 0, _balanceTIP3);
     }
     function setTip3WalletError(uint128 value0) public { value0;
@@ -608,7 +611,7 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
             time: uint32(now),
             expire: 0,
             pubkey: none
-        }(_addrPadawanTokenWallet, tokens, value);
+        }(_addrPadawanTokenWallet, _addrPadawanTokenWallet, tokens, value, false);
     }
 
     
@@ -670,11 +673,11 @@ contract DensSmvDebot is Debot, Upgradable, IDemiurgeStoreCb {
         tvm.accept();
     }
 
-    function updateCode(ContractType kind, TvmCell code) external override onlyStore {
+    function updateCode(ContractCode kind, TvmCell code) external override onlyStore {
         tvm.accept();
-        if (kind == ContractType.Proposal) {
+        if (kind == ContractCode.Proposal) {
             _codeProposal = code;
-        } else if (kind == ContractType.Padawan) {
+        } else if (kind == ContractCode.Padawan) {
             _codePadawan = code;
         }
     }

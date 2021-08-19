@@ -20,7 +20,7 @@ contract Padawan is Base {
 
     address _addrTokenRoot;
 
-    TipAccount _tipAccount;
+    TipAccount public _tipAccount;
     address _returnTo;
 
     mapping(address => uint32) _activeProposals;
@@ -146,7 +146,7 @@ contract Padawan is Base {
     function _unlockDeposit() private {
         ITokenWallet(_tipAccount.addr).transfer
             {value: 0.1 ton + 0.1 ton}
-            (_returnTo, _requestedVotes, 0.1 ton);
+            (address(this), _returnTo, _requestedVotes, 0.1 ton, false);
         _totalVotes -= _requestedVotes;
         _requestedVotes = 0;
         _returnTo = address(0);
@@ -173,7 +173,7 @@ contract Padawan is Base {
         require(msg.value >= DEPOSIT_TOKENS_FEE, Errors.MSG_VALUE_TOO_LOW);
         require(_tipAccount.addr != address(0), Errors.ACCOUNT_DOES_NOT_EXIST);
 
-        ITokenWallet(_tipAccount.addr).getBalance_InternalOwner
+        ITokenWallet(_tipAccount.addr).requestBalance
             {value: 0, flag: 64, bounce: true}
             (tvm.functionId(onGetBalance));
     }
@@ -197,7 +197,7 @@ contract Padawan is Base {
     function _createTokenAccount() private view {
         ITokenRoot(_addrTokenRoot).deployEmptyWallet
             {value: 2 ton, flag: 1, bounce: true}
-            (tvm.functionId(onTokenWalletDeploy), 0, 0, address(this).value, 1 ton);
+            (tvm.functionId(onTokenWalletDeploy), 0, address(this), 1 ton);
     }
 
     /*

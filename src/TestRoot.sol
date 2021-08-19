@@ -6,7 +6,7 @@ import "./interfaces/IClient.sol";
 import './Glossary.sol';
 
 
-contract Demiurge is IClient {
+contract SmvRoot is IClient {
     ProposalInfo public _proposalInfo;
     ReserveProposalSpecific public _specific;
 

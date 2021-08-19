@@ -14,20 +14,20 @@ import "./interfaces/UserInfo.sol";
 import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
-import "./interfaces/IDemiurge.sol";
-import "DemiurgeStore.sol";
+import "./interfaces/ISmvRoot.sol";
+import "SmvRootStore.sol";
 
 
 import "./interfaces/ITokenWallet.sol";
 import "./interfaces/ITokenRoot.sol";
 import "./interfaces/IFaucet.sol";
-import "./DemiurgeStore.sol";
+import "./SmvRootStore.sol";
 import "./Base.sol";
 import "./Padawan.sol";
-import "./interfaces/IDemiurge.sol";
+import "./interfaces/ISmvRoot.sol";
 import "./interfaces/IPadawan.sol";
 
-interface IDemiurgeDebot {
+interface ISmvDebot {
     function mainMenu() external;
 }
 
@@ -37,7 +37,7 @@ contract FaucetDebot is Debot, Upgradable {
     address _addrTokenRoot;
     address _addrFaucetTokenWallet;
 
-    address _addrDemiurgeDebot;
+    address _addrSmvDebot;
 
     uint256 _userPubkey;
     address _addrUserTokenWallet;
@@ -115,18 +115,18 @@ contract FaucetDebot is Debot, Upgradable {
     }
 
     function debotEnterPoint(address sender) public {
-        _addrDemiurgeDebot = sender;
+        _addrSmvDebot = sender;
         Terminal.input(tvm.functionId(getTokenWalletAddr), "Enter pubkey:", false);
     }
 
     function getTokenWalletAddr(string value) public {
         (_userPubkey, ) = stoi("0x" + value);
-        // Terminal.print(0, format("DEBUG: getTokenWalletAddr pubkey {}", _userPubkey));
+        Terminal.print(0, format("DEBUG: getTokenWalletAddr pubkey {}", _userPubkey));
         getTokenWalletAddr2(_userPubkey);
     }
 
     function getTokenWalletAddr2(uint256 value) public {
-        // Terminal.print(0, format("DEBUG: getTokenWalletAddr2 value {}", value));
+        Terminal.print(0, format("DEBUG: getTokenWalletAddr2 value {}", value));
         optional(uint256) none;
         ITokenRoot(_addrTokenRoot).getWalletAddress{
             abiVer: 2,
@@ -137,11 +137,11 @@ contract FaucetDebot is Debot, Upgradable {
             expire: 0,
             pubkey: none,
             sign: false
-        }(int8(0), value, uint256(0));
+        }(value, address(0));
     }
 
     function getTokenWalletAddrCb(address value) public {
-        // Terminal.print(0, format("DEBUG: getTokenWalletAddrCb address {}", value));
+        Terminal.print(0, format("DEBUG: getTokenWalletAddrCb address {}", value));
         _addrUserTokenWallet = value;
         Sdk.getAccountType(tvm.functionId(checkUserTokenWalletExists), value);
     }
@@ -167,6 +167,7 @@ contract FaucetDebot is Debot, Upgradable {
     }
 
     function getFaucetBalanceCb(uint32 value) public {
+        Terminal.print(0, format("DEBUG: getFaucetBalanceCb\n_addrUserTokenWallet {}", _addrUserTokenWallet));
         Terminal.print(0, format("Faucet balance: {} DeNS Token", value));
         _faucetBalance = value;
         optional(uint256) none;
@@ -176,15 +177,17 @@ contract FaucetDebot is Debot, Upgradable {
             sign: false,
             callbackId: tvm.functionId(getWalletBalanceCb),
             onErrorId: tvm.functionId(onError),
-            time: uint32(now),
+            time: 0,
             expire: 0,
             pubkey: none
         }();
     }
 
-    function getWalletBalanceCb(uint128 value) public {
+    function getWalletBalanceCb(
+        uint128 balance
+    ) public {
         Terminal.print(0, format("TIP-3 Wallet address: {}", _addrUserTokenWallet));
-        Terminal.print(0, format("TIP-3 Wallet balance: {} DeNS Token", value));
+        Terminal.print(0, format("TIP-3 Wallet balance: {} DeNS Token", balance));
         if(_faucetBalance != 0) {
             Terminal.print(0, "Sign the transaction to claim it.");
             this.claimTokens();
@@ -195,6 +198,7 @@ contract FaucetDebot is Debot, Upgradable {
     }
 
     function deployWallet() public {
+        Terminal.print(0, "DEBUG: deployWallet");
         IFaucet(_addrFaucet).deployWallet{
             abiVer: 2,
             extMsg: true,
@@ -227,7 +231,7 @@ contract FaucetDebot is Debot, Upgradable {
     // refactor
 
     function back() public {
-        IDemiurgeDebot(_addrDemiurgeDebot).mainMenu();
+        ISmvDebot(_addrSmvDebot).mainMenu();
     }
 
     function onCodeUpgrade() internal override {
