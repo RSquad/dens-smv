@@ -29,7 +29,6 @@ contract Faucet is Base, IFaucet {
         require(_balances[msg.pubkey()] != 0, Errors.INVALID_CALLER);
         tvm.accept();
 
-        _totalDistributed = _balances[msg.pubkey()];
         ITokenWallet(_addrTokenWallet).transfer
             {value: 0.5 ton, flag: 1, bounce: false}
             (address(this), addrTokenWallet, _balances[msg.pubkey()], 0.2 ton, false);
@@ -44,7 +43,9 @@ contract Faucet is Base, IFaucet {
     }
 
     function changeBalance(uint256 pubkey, uint32 value) public override signed returns (uint32) {
+        require(value > 0);
         _balances[pubkey] += value;
+        _totalDistributed += value;
         return _balances[pubkey];
     }
 
