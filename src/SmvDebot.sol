@@ -23,6 +23,7 @@ import "./Base.sol";
 import "./Padawan.sol";
 import "./interfaces/ISmvRoot.sol";
 import "./interfaces/IPadawan.sol";
+import "./interfaces/IProposalResolver.sol";
 
 interface IFaucetDebot {
     function debotEnterPoint(address sender) external;
@@ -47,7 +48,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     }
     
     address _store;
-    address _SmvRoot;
+    address _smvRoot;
     address _multisig;
     address _faucetDebot;
 
@@ -82,7 +83,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
 
     constructor(address SmvRoot, address store, address faucetDebot) public {
         tvm.accept();
-        _SmvRoot = SmvRoot;
+        _smvRoot = SmvRoot;
         _store = store;
         _faucetDebot = faucetDebot;
         SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
@@ -153,8 +154,19 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     function getProposals(uint32 index) public { index;
         delete _proposals;
         delete _proposalAddresses;
-        uint256 codeProposalHash = tvm.hash(_codeProposal);
-        Sdk.getAccountsDataByHash(tvm.functionId(getProposalsByHashCb), codeProposalHash, address(0x0));
+        IProposalResolver(_smvRoot).resolveCodeHashProposal{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(getProposals2),
+            onErrorId: 0,
+            time: 0,
+            expire: 0,
+            sign: false
+        }(_smvRoot);
+    }
+
+    function getProposals2(uint256 codeHashProposal) public {
+        Sdk.getAccountsDataByHash(tvm.functionId(getProposalsByHashCb), codeHashProposal, address(0x0));
     }
 
     function getProposalsByHashCb(ISdk.AccData[] accounts) public {
@@ -377,7 +389,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
                 expire: 0,
                 callbackId: tvm.functionId(createReserveProposalOnSuccess),
                 onErrorId: tvm.functionId(onError)
-            }(_SmvRoot, 8 ton, false, 3, payload);
+            }(_smvRoot, 8 ton, false, 3, payload);
         } else {
             mainMenu();
         }
@@ -419,7 +431,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         }
     }
     function resolvePadawan() public view {
-        ISmvRoot(_SmvRoot).resolvePadawan{
+        ISmvRoot(_smvRoot).resolvePadawan{
             abiVer: 2,
             extMsg: true,
             callbackId: tvm.functionId(setPadawanAddress),
@@ -455,7 +467,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             expire: 0,
             callbackId: tvm.functionId(resolvePadawan),
             onErrorId: tvm.functionId(onError)
-        }(_SmvRoot, 6 ton, false, 3, payload);
+        }(_smvRoot, 6 ton, false, 3, payload);
     }
 
     function depositTokens(uint32 index) public { index;

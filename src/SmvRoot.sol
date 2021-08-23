@@ -19,6 +19,7 @@ import {Errors} from './Errors.sol';
 struct NewProposal {
     uint256 totalVotes;
     address addrClient;
+    string title;
     ProposalType proposalType;
     TvmCell specific;
     TvmCell codePadawan;
@@ -118,13 +119,16 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         b.store(specific);
         TvmCell cellSpecific = b.toCell();
 
+        TvmCell codeProposal = _buildProposalCode(address(this)); 
+
         NewProposal _newProposal = NewProposal(
             0,
             _addrDensRoot,
+            title,
             ProposalType.Reserve,
             cellSpecific,
             _codePadawan,
-            _buildProposalState(title)
+            _buildProposalState(codeProposal, _deployedProposalsCounter)
         );
         _newProposals.push(_newProposal);
         
@@ -159,6 +163,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
                 new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
                     _totalVotes,
                     _newProposals[i].addrClient,
+                    _newProposals[i].title,
                     _newProposals[i].proposalType,
                     _newProposals[i].specific,
                     _newProposals[i].codePadawan
