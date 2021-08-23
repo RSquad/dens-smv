@@ -246,7 +246,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             _padawanVotes.lockedVotes
         ));
         MenuItem[] items;
-        if(_padawanVotes.totalVotes > 0) {
+        if(_padawanVotes.totalVotes > 0 && _proposals[i - 1].state < ProposalState.Ended) {
             items.push(MenuItem("Vote", "", tvm.functionId(voteForProposal3)));
         } else {
             Terminal.print(0, "You have no votes to vote.");
