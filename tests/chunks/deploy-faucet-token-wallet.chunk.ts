@@ -2,7 +2,7 @@ import { TonClient } from "@tonclient/core";
 import pkgTokenRoot from "../../ton-packages/RT.package";
 import pkgTokenWallet from "../../ton-packages/TTW.package";
 import pkgFaucetDebot from "../../ton-packages/FaucetDebot.package";
-import { TonContract } from "@rsquad/ton-utils";
+import { sleep, TonContract } from "@rsquad/ton-utils";
 import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import { isAddrActive } from "../utils";
@@ -35,6 +35,10 @@ export default async (
   });
 
   smcFaucetTokenWallet.address = deployFaucetTokenWallet.decoded.output.value0;
+
+  if (process.env.NETWORK !== "LOCAL") {
+    await sleep(30000);
+  }
 
   const isSmcFaucetTokenWalletActive = await isAddrActive(
     client,

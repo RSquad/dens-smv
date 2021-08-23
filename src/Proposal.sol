@@ -10,8 +10,8 @@ import "./interfaces/IProposal.sol";
 import "./interfaces/IPadawan.sol";
 
 contract Proposal is Base, PadawanResolver, IProposal {
-    address static _deployer;
-    string static _title;
+    address _addrRoot;
+    uint32 static _id;
     
     address public _addrClient;
 
@@ -25,15 +25,23 @@ contract Proposal is Base, PadawanResolver, IProposal {
     constructor(
         uint128 totalVotes,
         address addrClient,
+        string title,
         ProposalType proposalType,
         TvmCell specific,
         TvmCell codePadawan
     ) public {
-        require(_deployer == msg.sender);
+        optional(TvmCell) optSalt = tvm.codeSalt(tvm.code());
+        require(optSalt.hasValue());
+        (address addrRoot) = optSalt
+            .get()
+            .toSlice()
+            .decode(address);
+        require(msg.sender == addrRoot);
+        _addrRoot = addrRoot;
 
         _addrClient = addrClient;
 
-        _proposalInfo.title = _title;
+        _proposalInfo.title = title;
         _proposalInfo.start = uint32(now);
         _proposalInfo.end = uint32(now + 60 * 60 * 24 * 7);
         _proposalInfo.proposalType = proposalType;
@@ -154,7 +162,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
     function _buildPadawanState(address owner) internal view override returns (TvmCell) {
         return tvm.buildStateInit({
             contr: Padawan,
-            varInit: {_deployer: _deployer, _owner: owner},
+            varInit: {_deployer: _addrRoot, _owner: owner},
             code: _codePadawan
         });
     }

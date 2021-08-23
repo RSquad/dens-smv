@@ -112,7 +112,8 @@ describe("Proposal test", () => {
       await smcSmvRoot.run({
         functionName: "resolveProposal",
         input: {
-          title: utf8ToHex("title-random"),
+          addrRoot: smcSmvRoot.address,
+          id: 0,
         },
       })
     ).value.addrProposal;
