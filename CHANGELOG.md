@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.5](https://github.com/RSquad/dens-smv/compare/v0.0.4...v0.0.5) (2021-08-23)
+
+
+### Features
+
+* add salt to proposal ([7b764bb](https://github.com/RSquad/dens-smv/commit/7b764bbce1607c754f40a419bd6d4f7ceabc255f))
+* move totaldistributed to change balance ([4a666d8](https://github.com/RSquad/dens-smv/commit/4a666d89c7f67c330a4967f9269c95abe6b39bf0))
+* remove Vote button when proposal status more that OnVoting ([5664556](https://github.com/RSquad/dens-smv/commit/5664556d12b830726bf34aa130c4bbf4bcee442b))
+
 ### [0.0.4](https://github.com/RSquad/dens-smv/compare/v0.0.3...v0.0.4) (2021-08-19)
 
 
