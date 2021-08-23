@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.4](https://github.com/RSquad/dens-smv/compare/v0.0.3...v0.0.4) (2021-08-19)
+
+
+### Features
+
+* add proposal test ([ad01f84](https://github.com/RSquad/dens-smv/commit/ad01f8486daa06d493e4908487b556ac2f517295))
+* change ignore ([a42fb8f](https://github.com/RSquad/dens-smv/commit/a42fb8f72253e7c89f9dbe3c2f319d916aef69a6))
+* integrate new TIP-3 ([b4cb96f](https://github.com/RSquad/dens-smv/commit/b4cb96fbecf7a41938ffb7474e771c5437a812e3))
+
+
+### Bug Fixes
+
+* bug with 101 error in acquire votes ([71289c4](https://github.com/RSquad/dens-smv/commit/71289c40896e7c9da685c2fe792fe9615c33f2e2))
+* out of index proposal bug ([863b6f9](https://github.com/RSquad/dens-smv/commit/863b6f9a29a11ac8d44f8b335d660f062569cdc6))
+* proposal display  ([385f908](https://github.com/RSquad/dens-smv/commit/385f9084766513f3c512e4ab0100f2926d7626f2))
+
 ### [0.0.3](https://github.com/RSquad/dens-smv/compare/v0.0.2...v0.0.3) (2021-08-02)
 
 
