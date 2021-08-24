@@ -6,7 +6,7 @@ enum ContractCode {
 }
 
 enum ContractAddr {
-    DensRoot,
+    Client,
     TokenRoot,
     Faucet
 }
@@ -15,7 +15,7 @@ interface ISmvRootStore {
     function setPadawanCode(TvmCell code) external;
     function setProposalCode(TvmCell code) external;
 
-    function setDensRootAddr(address addr) external;
+    function setClientAddr(address addr) external;
     function setTokenRootAddr(address addr) external;
     function setFaucetAddr(address addr) external;
 

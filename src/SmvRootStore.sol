@@ -17,9 +17,9 @@ contract SmvRootStore is Base, ISmvRootStore {
         _codes[uint8(ContractCode.Proposal)] = code;
     }
 
-    function setDensRootAddr(address addr) public signed override {
+    function setClientAddr(address addr) public signed override {
         require(addr != address(0));
-        _addrs[uint8(ContractAddr.DensRoot)] = addr;
+        _addrs[uint8(ContractAddr.Client)] = addr;
     }
     function setTokenRootAddr(address addr) public signed override {
         require(addr != address(0));

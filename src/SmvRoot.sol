@@ -11,6 +11,7 @@ import "./interfaces/IClient.sol";
 import "./interfaces/IFaucet.sol";
 import "./interfaces/ISmvRoot.sol";
 import './Glossary.sol';
+import './Checks.sol';
 
 import {Errors} from './Errors.sol';
 
@@ -27,58 +28,56 @@ struct NewProposal {
 }
 
 
-contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IFaucetCb {
+contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IFaucetCb, Checks {
+
+/* -------------------------------------------------------------------------- */
+/*                                ANCHOR Checks                               */
+/* -------------------------------------------------------------------------- */
+
     uint8 constant CHECK_PROPOSAL = 1;
     uint8 constant CHECK_PADAWAN = 2;
+    uint8 constant CHECK_ADDR_CLIENT = 4;
+    uint8 constant CHECK_ADDR_TOKEN_ROOT = 8;
+    uint8 constant CHECK_ADDR_FAUCET = 16;
+
+    function _createChecks() private inline {
+        _checkList =
+            CHECK_PROPOSAL |
+            CHECK_PADAWAN |
+            CHECK_ADDR_CLIENT |
+            CHECK_ADDR_TOKEN_ROOT |
+            CHECK_ADDR_FAUCET;
+    }
+
+/* -------------------------------------------------------------------------- */
+/*                                 ANCHOR Init                                */
+/* -------------------------------------------------------------------------- */
 
     uint128 constant TOTAL_EMISSION = 21000000;
 
     uint32 _deployedPadawansCounter = 0;
     uint32 _deployedProposalsCounter = 0;
-    uint16 _version = 3;
 
     address _addrStore;
-    address _addrDensRoot;
+    address _addrClient;
     address _addrTokenRoot;
     address _addrFaucet;
-
-    uint8 _checkList;
 
     NewProposal[] public _newProposals;
     uint8 public _getBalancePendings = 0;
     uint128 public _totalVotes = 0;
 
-    /*
-    *  Inline work with checklist
-    */
-
-    function _createChecks() private inline {
-        _checkList = CHECK_PADAWAN | CHECK_PROPOSAL;
-    }
-
-    function _passCheck(uint8 check) private inline {
-        _checkList &= ~check;
-    }
-
-    function _allCheckPassed() private view inline returns (bool) {
-        return (_checkList == 0);
-    }
-
-    modifier checksEmpty() {
-        require(_allCheckPassed(), Errors.NOT_ALL_CHECKS_PASSED);
-        tvm.accept();
-        _;
-    }
+    bool public _inited = false;
 
     modifier onlyStore() {
         require(msg.sender == _addrStore);
-        tvm.accept();
         _;
     }
 
-    /*
-    * Initialization functions
-    */
+    modifier inited() {
+        require(_inited == true, Errors.CONTRACT_IS_NOT_INITED);
+        _;
+    }
 
     constructor(address addrStore) public {
         if (msg.sender == address(0)) {
@@ -89,31 +88,80 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         
         if (addrStore != address(0)) {
             _addrStore = addrStore;
-            SmvRootStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
-            SmvRootStore(_addrStore).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
-            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.DensRoot);
-            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
-            SmvRootStore(_addrStore).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.Faucet);
+            SmvRootStore(_addrStore).queryCode
+                {value: 0.2 ton, bounce: true}
+                (ContractCode.Proposal);
+            SmvRootStore(_addrStore).queryCode
+                {value: 0.2 ton, bounce: true}
+                (ContractCode.Padawan);
+            SmvRootStore(_addrStore).queryAddr
+                {value: 0.2 ton, bounce: true}
+                (ContractAddr.Client);
+            SmvRootStore(_addrStore).queryAddr
+                {value: 0.2 ton, bounce: true}
+                (ContractAddr.TokenRoot);
+            SmvRootStore(_addrStore).queryAddr
+                {value: 0.2 ton, bounce: true}
+                (ContractAddr.Faucet);
         }
 
         _createChecks();
     }
 
-    // Padawans
+    function _onInit() private {
+        if(_isCheckListEmpty() && !_inited) {
+            _inited = true;
+        }
+    }
+
+    function updateCode(
+        ContractCode kind,
+        TvmCell code
+    ) external override onlyStore {
+        if (kind == ContractCode.Proposal) {
+            _codeProposal = code;
+            _passCheck(CHECK_PROPOSAL);
+        } else if (kind == ContractCode.Padawan) {
+            _codePadawan = code;
+            _passCheck(CHECK_PADAWAN);
+        }
+        _onInit();
+    }
+
+    function updateAddr(ContractAddr kind, address addr) external override onlyStore {
+        require(addr != address(0));
+        if (kind == ContractAddr.Client) {
+            _addrClient = addr;
+            _passCheck(CHECK_ADDR_CLIENT);
+        } else if (kind == ContractAddr.TokenRoot) {
+            _addrTokenRoot = addr;
+            _passCheck(CHECK_ADDR_TOKEN_ROOT);
+        } else if (kind == ContractAddr.Faucet) {
+            _addrFaucet = addr;
+            _passCheck(CHECK_ADDR_FAUCET);
+        }
+        _onInit();
+    }
+
+/* -------------------------------------------------------------------------- */
+/*                               ANCHOR Padawan                               */
+/* -------------------------------------------------------------------------- */
     
-    function deployPadawan(address owner) external onlyContract {
+    function deployPadawan(address owner) external onlyContract inited {
         require(msg.value >= DEPLOY_FEE + 2 ton);
         require(owner != address(0));
         TvmCell state = _buildPadawanState(owner);
         new Padawan{stateInit: state, value: START_BALANCE + 2 ton}(_addrTokenRoot);
     }
 
-    // Proposals
+/* -------------------------------------------------------------------------- */
+/*                              ANCHOR Proposals                              */
+/* -------------------------------------------------------------------------- */
 
     function deployReserveProposal(
         string title,
         ReserveProposalSpecific specific
-    ) external onlyContract {
+    ) external onlyContract inited {
         require(msg.value >= DEPLOY_PROPOSAL_FEE);
         TvmBuilder b;
         b.store(specific);
@@ -123,7 +171,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
 
         NewProposal _newProposal = NewProposal(
             0,
-            _addrDensRoot,
+            _addrClient,
             title,
             ProposalType.Reserve,
             cellSpecific,
@@ -140,7 +188,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
     ) private {
         uint256 hashState = tvm.hash(_newProposals[i].state);
         address addrProposal = address.makeAddrStd(0, hashState);
-        IClient(_addrDensRoot).onProposalDeploy
+        IClient(_addrClient).onProposalDeploy
             {value: 1 ton, bounce: true}
             (addrProposal, _newProposals[i].proposalType, _newProposals[i].specific);
 
@@ -151,7 +199,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
 
     function getTotalDistributedCb(
         uint128 totalDistributed
-    ) public override {
+    ) public inited override {
         require(msg.sender == _addrFaucet);
         _totalVotes = totalDistributed;
         _getBalancePendings -= 1;
@@ -175,50 +223,25 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         }
     }
 
-    // Setters
-
-    function updateAddr(ContractAddr kind, address addr) external override onlyStore {
-        require(addr != address(0));
-        if (kind == ContractAddr.DensRoot) {
-            _addrDensRoot = addr;
-        } else if (kind == ContractAddr.TokenRoot) {
-            _addrTokenRoot = addr;
-        } else if (kind == ContractAddr.Faucet) {
-            _addrFaucet = addr;
-        }
-    }
-
-    function updateCode(ContractCode kind, TvmCell code) external override onlyStore {
-        tvm.accept();
-        if (kind == ContractCode.Proposal) {
-            _codeProposal = code;
-            _passCheck(CHECK_PROPOSAL);
-        } else if (kind == ContractCode.Padawan) {
-            _codePadawan = code;
-            _passCheck(CHECK_PADAWAN);
-        }
-    }
-
     // Getters
 
     function getStored() public view returns (
         TvmCell codePadawan,
         TvmCell codeProposal,
         address addrStore,
-        address addrDensRoot,
+        address addrClient,
         address addrTokenRoot,
         address addrFaucet
     ) {
         codePadawan = _codePadawan;
         codeProposal = _codeProposal;
         addrStore = _addrStore;
-        addrDensRoot = _addrDensRoot;
+        addrClient = _addrClient;
         addrTokenRoot = _addrTokenRoot;
         addrFaucet = _addrFaucet;
     }
 
-    function getStats() public view returns (uint16 version, uint32 deployedPadawansCounter, uint32 deployedProposalsCounter) {
-        version = _version;
+    function getStats() public view returns (uint32 deployedPadawansCounter, uint32 deployedProposalsCounter) {
         deployedPadawansCounter = _deployedPadawansCounter;
         deployedProposalsCounter = _deployedProposalsCounter;
     }
