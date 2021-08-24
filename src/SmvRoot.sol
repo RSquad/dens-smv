@@ -152,6 +152,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
     function getTotalDistributedCb(
         uint128 totalDistributed
     ) public override {
+        require(msg.sender == _addrFaucet);
         _totalVotes = totalDistributed;
         _getBalancePendings -= 1;
         _deployProposals();
