@@ -86,24 +86,22 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         require(addrStore != address(0), Errors.STORE_SHOULD_BE_NOT_NULL);
         tvm.accept();
         
-        if (addrStore != address(0)) {
-            _addrStore = addrStore;
-            SmvRootStore(_addrStore).queryCode
-                {value: 0.2 ton, bounce: true}
-                (ContractCode.Proposal);
-            SmvRootStore(_addrStore).queryCode
-                {value: 0.2 ton, bounce: true}
-                (ContractCode.Padawan);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.Client);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.TokenRoot);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.Faucet);
-        }
+        _addrStore = addrStore;
+        SmvRootStore(_addrStore).queryCode
+            {value: 0.2 ton, bounce: true}
+            (ContractCode.Proposal);
+        SmvRootStore(_addrStore).queryCode
+            {value: 0.2 ton, bounce: true}
+            (ContractCode.Padawan);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.Client);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.TokenRoot);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.Faucet);
 
         _createChecks();
     }
