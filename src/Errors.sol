@@ -14,7 +14,6 @@ library Errors {
     
     uint16 constant PADAWAN_ALREADY_DEPLOYED =          301;
     uint16 constant PROPOSAL_ALREADY_DEPLOYED =         302;
-    uint16 constant NOT_ALL_CHECKS_PASSED =             303;
     uint16 constant INIT_ALREADY_COMPLETED =            304;
     uint16 constant END_LOWER_THAT_START =              305;
     uint16 constant NOW_LOWER_THAT_START =              306;
@@ -29,4 +28,10 @@ library Errors {
     uint32 constant DEPOSIT_WITH_SUCH_ID_EXISTS =       503;
     uint32 constant PENDING_DEPOSIT_ALREADY_EXISTS =    504;
     uint32 constant NOT_ENOUGH_VALUE_TO_VOTE =          505;
+
+/* --------------------------- ANCHOR common 10** --------------------------- */
+
+    uint32 constant CONTRACT_IS_NOT_INITED = 1000;
+    uint32 constant NOT_ALL_CHECKS_PASSED = 1001;
+
 }

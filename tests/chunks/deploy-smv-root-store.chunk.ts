@@ -49,7 +49,7 @@ export default async (
   });
 
   await smcSmvRootStore.call({
-    functionName: "setDensRootAddr",
+    functionName: "setClientAddr",
     input: {
       addr: "0:0000000000000000000000000000000000000000000000000000000000000001",
     },

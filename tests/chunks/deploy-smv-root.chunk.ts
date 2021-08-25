@@ -46,9 +46,7 @@ export default async (
   expect(stored.codePadawan, "codePadawan is empty").to.be.not.eq(EMPTY_CODE);
   expect(stored.codeProposal, "codeProposal is empty").to.be.not.eq(EMPTY_CODE);
   expect(stored.addrStore, "addrStore is empty").to.be.not.eq(EMPTY_ADDRESS);
-  expect(stored.addrDensRoot, "addrDensRoot is empty").to.be.not.eq(
-    EMPTY_ADDRESS
-  );
+  expect(stored.addrClient, "addrClient is empty").to.be.not.eq(EMPTY_ADDRESS);
   expect(stored.addrTokenRoot, "addrTokenRoot is empty").to.be.not.eq(
     EMPTY_ADDRESS
   );
