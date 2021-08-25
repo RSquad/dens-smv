@@ -544,7 +544,6 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
 
     function onCallReclaimSuccess() public {
         Terminal.print(tvm.functionId(mainMenu), 'Reclaim success!');
-        mainMenu();
     }
 
     /* -------------------------------------------------------------------------- */
