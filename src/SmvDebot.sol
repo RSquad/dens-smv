@@ -671,7 +671,11 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     }
 
     function onError(uint32 sdkError, uint32 exitCode) public {
-        Terminal.print(0, format("Error! Sdk error {}. Exit code {}.", sdkError, exitCode));
+        if(sdkError == 414 && exitCode == 116) {
+            Terminal.print(0, "Error! There are not enough TON Crystals on the wallet to send tokens, you need to replenish the balance.");
+        } else {
+            Terminal.print(0, format("Error! Sdk error {}. Exit code {}.", sdkError, exitCode));
+        }
         mainMenu();
     }
 
