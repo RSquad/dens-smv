@@ -33,11 +33,6 @@ contract Base {
         _;
     }
 
-    modifier accept {
-        tvm.accept();
-        _;
-    }
-
     modifier onlyContract() {
         require(msg.sender != address(0), Errors.ONLY_CONTRACT);
         _;
