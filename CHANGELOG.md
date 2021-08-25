@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.6](https://github.com/RSquad/dens-smv/compare/v0.0.5...v0.0.6) (2021-08-25)
+
+
+### Features
+
+* add deployer checks ([e7edad3](https://github.com/RSquad/dens-smv/commit/e7edad39b1367ca076b3804ed24039142cd30e36))
+* add getTotalDistributedCb sender check ([8783b50](https://github.com/RSquad/dens-smv/commit/8783b50041f7c73ff31ea6966c8e8fabf106f792))
+* add human readable error for TW 116 ([58c5165](https://github.com/RSquad/dens-smv/commit/58c5165759cc771a4966bf9015957f448792cb4c))
+
+
+### Bug Fixes
+
+* remove double thread after reclaim  ([22e7404](https://github.com/RSquad/dens-smv/commit/22e7404aecc58e3c35b3cf17b61f90620d298e05))
+
 ### [0.0.5](https://github.com/RSquad/dens-smv/compare/v0.0.4...v0.0.5) (2021-08-23)
 
 
