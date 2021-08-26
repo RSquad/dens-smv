@@ -84,7 +84,10 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         }
         require(addrStore != address(0), Errors.STORE_SHOULD_BE_NOT_NULL);
         tvm.accept();
-        
+        _initialize(addrStore);
+    }
+
+    function _initialize(address addrStore) private {
         _addrStore = addrStore;
         SmvRootStore(_addrStore).queryCode
             {value: 0.2 ton, bounce: true}
@@ -221,7 +224,9 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         }
     }
 
-    // Getters
+/* -------------------------------------------------------------------------- */
+/*                               ANCHOR getters                               */
+/* -------------------------------------------------------------------------- */
 
     function getStored() public view returns (
         TvmCell codePadawan,
@@ -243,4 +248,21 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         deployedPadawansCounter = _deployedPadawansCounter;
         deployedProposalsCounter = _deployedProposalsCounter;
     }
+
+/* -------------------------------------------------------------------------- */
+/*                               ANCHOR setcode                               */
+/* -------------------------------------------------------------------------- */
+
+    function update(address addrStore, TvmCell code) public signed {
+        tvm.accept();
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+        onCodeUpgrade(addrStore);
+    }
+
+    function onCodeUpgrade(address addrStore) private {
+        tvm.resetStorage();
+        _initialize(addrStore);
+    }
+
 }

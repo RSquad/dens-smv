@@ -11,11 +11,12 @@ export default async (
   smcSafeMultisigWallet: TonContract,
   smcSmvRootStore: TonContract
 ) => {
+  const keys = await client.crypto.generate_random_sign_keys();
   const smcSmvRoot = new TonContract({
     client,
     name: "SmvRoot",
     tonPackage: pkgSmvRoot,
-    keys: await client.crypto.generate_random_sign_keys(),
+    keys,
   });
 
   await smcSmvRoot.calcAddress();
@@ -28,7 +29,8 @@ export default async (
 
   await smcSmvRoot.deploy({
     input: {
-      addrStore: smcSmvRootStore.address,
+      addrStore:
+        "0:1111111111111111111111111111111111111111111111111111111111111111",
     },
   });
 
@@ -36,12 +38,31 @@ export default async (
   expect(isSmcSmvRootActive).to.be.true;
 
   console.log(`SmvRoot address: ${smcSmvRoot.address}`);
+  console.log(`SmvRoot public: ${keys.public}`);
+  console.log(`SmvRoot secret: ${keys.secret}`);
+
+  let stored = (await smcSmvRoot.run({ functionName: "getStored" })).value;
+  expect(stored.addrStore).to.be.eq(
+    "0:1111111111111111111111111111111111111111111111111111111111111111"
+  );
+
+  const codeSmvRoot = (
+    await client.boc.get_code_from_tvc({ tvc: pkgSmvRoot.image })
+  ).code;
+
+  await smcSmvRoot.call({
+    functionName: "update",
+    input: {
+      addrStore: smcSmvRootStore.address,
+      code: codeSmvRoot,
+    },
+  });
 
   if (process.env.NETWORK !== "LOCAL") {
     await sleep(30000);
   }
 
-  const stored = (await smcSmvRoot.run({ functionName: "getStored" })).value;
+  stored = (await smcSmvRoot.run({ functionName: "getStored" })).value;
   expect(Object.keys(stored)).to.have.lengthOf(6);
   expect(stored.codePadawan, "codePadawan is empty").to.be.not.eq(EMPTY_CODE);
   expect(stored.codeProposal, "codeProposal is empty").to.be.not.eq(EMPTY_CODE);
