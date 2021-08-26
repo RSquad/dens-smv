@@ -1,21 +1,14 @@
 import { TonClient } from "@tonclient/core";
-import pkgSafeMultisigWallet from "../ton-packages/SafeMultisigWallet.package";
+import pkgSafeMultisigWallet from "../../ton-packages/SafeMultisigWallet.package";
 import { createClient, TonContract } from "@rsquad/ton-utils";
-import initFaucetChunk from "./chunks/init-faucet.chunk";
-import deployTokenRootChunk from "./chunks/deploy-token-root.chunk";
-import deployFaucetTokenWalletChunk from "./chunks/deploy-faucet-token-wallet.chunk";
-import deployFaucetChunk from "./chunks/deploy-faucet.chunk";
-import deployFaucetDebotChunk from "./chunks/deploy-faucet-debot.chunk";
-import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
-import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
-import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
-import * as fs from "fs";
-import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
-import { isAddrActive } from "./utils";
-import { expect } from "chai";
-import { callThroughMultisig } from "@rsquad/ton-utils/dist/net";
-import deployUserTokenWalletChunk from "./chunks/faucet/deploy-user-token-wallet.chunk";
-import changeFaucetBalanceChunk from "./chunks/faucet/change-faucet-balance.chunk";
+import initFaucetChunk from "../chunks/init-faucet.chunk";
+import deployTokenRootChunk from "../chunks/deploy-token-root.chunk";
+import deployFaucetTokenWalletChunk from "../chunks/deploy-faucet-token-wallet.chunk";
+import deployFaucetChunk from "../chunks/deploy-faucet.chunk";
+import deploySmvRootStoreChunk from "../chunks/deploy-smv-root-store.chunk";
+import deploySmvRootChunk from "../chunks/deploy-smv-root.chunk";
+import deployUserTokenWalletChunk from "../chunks/faucet/deploy-user-token-wallet.chunk";
+import changeFaucetBalanceChunk from "../chunks/faucet/change-faucet-balance.chunk";
 
 describe("Faucet test", () => {
   let client: TonClient;

@@ -104,7 +104,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         bytes icon
     ) {
         name = "DeNS SMV Debot";
-        version = "1.0.0";
+        version = "1.0.3";
         publisher = "RSquad";
         key = "Voting system for DeNS";
         author = "RSquad";

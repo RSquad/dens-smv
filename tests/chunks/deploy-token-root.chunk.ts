@@ -62,7 +62,10 @@ export default async (
     (await smcTokenRoot.run({ functionName: "getWalletCode" })).value.value0
   ).to.be.eq(codeWallet);
 
-  fs.writeFileSync("./keys/token-root-keys", JSON.stringify(smcTokenRoot.keys));
+  fs.writeFileSync(
+    "./creds/token-root-keys",
+    JSON.stringify(smcTokenRoot.keys)
+  );
 
   return { smcTokenRoot };
 };

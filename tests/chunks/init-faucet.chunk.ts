@@ -21,12 +21,20 @@ export default async (client: TonClient) => {
     keys: await client.crypto.generate_random_sign_keys(),
   });
 
-  smcFaucetDebot.calcAddress();
+  await smcFaucetDebot.calcAddress();
 
-  fs.writeFileSync("./keys/faucet-keys", JSON.stringify(smcFaucet.keys));
+  fs.writeFileSync("./creds/faucet-keys", JSON.stringify(smcFaucet.keys));
   fs.writeFileSync(
-    "./keys/faucet-debot-keys",
+    "./creds/faucet-debot-keys",
     JSON.stringify(smcFaucetDebot.keys)
+  );
+  fs.writeFileSync(
+    "./creds/faucet-address",
+    JSON.stringify({ address: smcFaucet.address })
+  );
+  fs.writeFileSync(
+    "./creds/faucet-debot-address",
+    JSON.stringify({ address: smcFaucetDebot.address })
   );
 
   return {

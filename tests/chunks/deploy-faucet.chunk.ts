@@ -41,7 +41,7 @@ export default async (
   console.log(`public: ${smcFaucet.keys.public}`);
   console.log(`secret: ${smcFaucet.keys.secret}`);
 
-  fs.writeFileSync("./keys/faucet-keys", JSON.stringify(smcFaucet.keys));
+  fs.writeFileSync("./creds/faucet-keys", JSON.stringify(smcFaucet.keys));
 
   return { smcFaucet };
 };

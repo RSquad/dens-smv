@@ -1,22 +1,22 @@
 import { TonClient } from "@tonclient/core";
-import pkgSafeMultisigWallet from "../ton-packages/SafeMultisigWallet.package";
-import pkgProposal from "../ton-packages/Proposal.package";
-import pkgPadawan from "../ton-packages/Padawan.package";
+import pkgSafeMultisigWallet from "../../ton-packages/SafeMultisigWallet.package";
+import pkgProposal from "../../ton-packages/Proposal.package";
+import pkgPadawan from "../../ton-packages/Padawan.package";
 import { createClient, logPubGetter, TonContract } from "@rsquad/ton-utils";
-import initFaucetChunk from "./chunks/init-faucet.chunk";
-import deployTokenRootChunk from "./chunks/deploy-token-root.chunk";
-import deployFaucetTokenWalletChunk from "./chunks/deploy-faucet-token-wallet.chunk";
-import deployFaucetChunk from "./chunks/deploy-faucet.chunk";
-import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
-import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
+import initFaucetChunk from "./../chunks/init-faucet.chunk";
+import deployTokenRootChunk from "./../chunks/deploy-token-root.chunk";
+import deployFaucetTokenWalletChunk from "./../chunks/deploy-faucet-token-wallet.chunk";
+import deployFaucetChunk from "./../chunks/deploy-faucet.chunk";
+import deploySmvRootStoreChunk from "./../chunks/deploy-smv-root-store.chunk";
+import deploySmvRootChunk from "./../chunks/deploy-smv-root.chunk";
 import * as fs from "fs";
-import { isAddrActive } from "./utils";
+import { isAddrActive } from "./../utils";
 import { expect } from "chai";
 import { callThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
-import deployUserTokenWalletChunk from "./chunks/faucet/deploy-user-token-wallet.chunk";
+import deployUserTokenWalletChunk from "./../chunks/faucet/deploy-user-token-wallet.chunk";
 import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
-import changeFaucetBalanceChunk from "./chunks/faucet/change-faucet-balance.chunk";
+import changeFaucetBalanceChunk from "./../chunks/faucet/change-faucet-balance.chunk";
 
 describe("Proposal test", () => {
   let client: TonClient;
