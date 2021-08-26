@@ -7,6 +7,7 @@ import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import { EMPTY_ADDRESS, EMPTY_CODE } from "@rsquad/ton-utils/dist/constants";
+import * as fs from "fs";
 
 export default async (
   client: TonClient,
@@ -82,6 +83,8 @@ export default async (
   addrs.forEach((addr) => {
     expect(addr).to.not.be.eq(EMPTY_ADDRESS);
   });
+
+  fs.writeFileSync("./smv-root-store-keys", JSON.stringify(keys));
 
   return { smcSmvRootStore };
 };

@@ -16,6 +16,7 @@ import { callThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import deployUserTokenWalletChunk from "./chunks/faucet/deploy-user-token-wallet.chunk";
 import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
+import changeFaucetBalanceChunk from "./chunks/faucet/change-faucet-balance.chunk";
 
 describe("Proposal test", () => {
   let client: TonClient;
@@ -70,6 +71,10 @@ describe("Proposal test", () => {
       smcTokenRoot,
       smcFaucetTokenWallet
     );
+  });
+
+  it("chages Faucet balance", async () => {
+    await changeFaucetBalanceChunk(client, smcFaucet);
   });
 
   it("deploys and inits SmvRootStore", async () => {

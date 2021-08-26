@@ -1,5 +1,6 @@
 import { TonClient } from "@tonclient/core";
 import pkgSafeMultisigWallet from "../ton-packages/SafeMultisigWallet.package";
+import pkgSmvDebot from "../ton-packages/SmvDebot.package";
 import { createClient, TonContract } from "@rsquad/ton-utils";
 import initFaucetChunk from "./chunks/init-faucet.chunk";
 import deployTokenRootChunk from "./chunks/deploy-token-root.chunk";
@@ -9,15 +10,7 @@ import deployFaucetDebotChunk from "./chunks/deploy-faucet-debot.chunk";
 import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
 import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
 import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
-import * as fs from "fs";
-import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
-import { isAddrActive } from "./utils";
-import { expect } from "chai";
-import { callThroughMultisig } from "@rsquad/ton-utils/dist/net";
-import deployUserTokenWalletChunk from "./chunks/faucet/deploy-user-token-wallet.chunk";
-import changeFaucetBalanceChunk from "./chunks/faucet/change-faucet-balance.chunk";
-
-describe("Faucet test", () => {
+describe("Deploy", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
   let smcSmvRootStore: TonContract;
@@ -72,8 +65,15 @@ describe("Faucet test", () => {
     );
   });
 
-  it("chages Faucet balance", async () => {
-    await changeFaucetBalanceChunk(client, smcFaucet);
+  it("deploys and inits FaucetDeBot", async () => {
+    await deployFaucetDebotChunk(
+      client,
+      smcSafeMultisigWallet,
+      smcFaucetDebot,
+      smcFaucet,
+      smcTokenRoot,
+      smcFaucetTokenWallet
+    );
   });
 
   it("deploys and inits SmvRootStore", async () => {
@@ -95,7 +95,15 @@ describe("Faucet test", () => {
     smcSmvRoot = result.smcSmvRoot;
   });
 
-  it("deploys UserTokenWallet throught Faucet", async () => {
-    await deployUserTokenWalletChunk(client, smcTokenRoot, smcFaucet);
+  it("deploys and inits SmvDebot", async () => {
+    const result = await deploySmvDebotChunk(
+      client,
+      smcSafeMultisigWallet,
+      smcSmvDebot,
+      smcSmvRoot,
+      smcSmvRootStore,
+      smcFaucetDebot
+    );
+    smcSmvDebot = result.smcSmvDebot;
   });
 });

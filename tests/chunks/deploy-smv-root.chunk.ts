@@ -5,6 +5,7 @@ import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import { EMPTY_ADDRESS, EMPTY_CODE } from "@rsquad/ton-utils/dist/constants";
+import * as fs from "fs";
 
 export default async (
   client: TonClient,
@@ -24,7 +25,7 @@ export default async (
   await sendThroughMultisig({
     smcSafeMultisigWallet,
     dest: smcSmvRoot.address,
-    value: 10_000_000_000,
+    value: 5_000_000_000,
   });
 
   await smcSmvRoot.deploy({
@@ -72,6 +73,8 @@ export default async (
     EMPTY_ADDRESS
   );
   expect(stored.addrFaucet, "addrFaucet is empty").to.be.not.eq(EMPTY_ADDRESS);
+
+  fs.writeFileSync("./smv-root-keys", JSON.stringify(keys));
 
   return { smcSmvRoot };
 };

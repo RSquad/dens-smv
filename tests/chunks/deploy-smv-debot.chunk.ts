@@ -5,7 +5,7 @@ import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import * as fs from "fs";
-import { EMPTY_ADDRESS, NETWORK_MAP } from "@rsquad/ton-utils/dist/constants";
+import { NETWORK_MAP } from "@rsquad/ton-utils/dist/constants";
 
 export default async (
   client: TonClient,
@@ -23,8 +23,6 @@ export default async (
     keys,
   });
 
-  fs.writeFileSync("./dk", JSON.stringify(keys));
-
   await smcSmvDebot.calcAddress();
 
   console.log(`SmvDebot deploy: ${smcSmvDebot.address}`);
@@ -34,7 +32,7 @@ export default async (
   await sendThroughMultisig({
     smcSafeMultisigWallet,
     dest: smcSmvDebot.address,
-    value: 100_000_000_000,
+    value: 5_000_000_000,
   });
 
   if (process.env.NETWORK !== "LOCAL") {
@@ -69,7 +67,7 @@ export default async (
   await smcSmvDebot.call({
     functionName: "init",
     input: {
-      smvRoot: EMPTY_ADDRESS,
+      smvRoot: smcSmvRoot.address,
       store: smcSmvRootStore.address,
       faucetDebot: smcFaucetDebot.address,
     },
@@ -83,6 +81,8 @@ export default async (
       smcSmvDebot.address
     }`
   );
+
+  fs.writeFileSync("./smv-debot-keys", JSON.stringify(keys));
 
   return { smcSmvDebot };
 };

@@ -2,6 +2,7 @@ import { TonClient } from "@tonclient/core";
 import pkgFaucet from "../../ton-packages/Faucet.package";
 import pkgFaucetDebot from "../../ton-packages/FaucetDebot.package";
 import { TonContract } from "@rsquad/ton-utils";
+import * as fs from "fs";
 
 export default async (client: TonClient) => {
   const smcFaucet = new TonContract({
@@ -21,6 +22,9 @@ export default async (client: TonClient) => {
   });
 
   smcFaucetDebot.calcAddress();
+
+  fs.writeFileSync("./faucet-keys", JSON.stringify(smcFaucet.keys));
+  fs.writeFileSync("./faucet-debot-keys", JSON.stringify(smcFaucetDebot.keys));
 
   return {
     smcFaucet,

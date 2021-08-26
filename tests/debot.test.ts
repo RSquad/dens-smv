@@ -11,6 +11,7 @@ import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
 import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
 import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
 import * as fs from "fs";
+import changeFaucetBalanceChunk from "./chunks/faucet/change-faucet-balance.chunk";
 
 describe("Debot test", () => {
   let client: TonClient;
@@ -65,6 +66,10 @@ describe("Debot test", () => {
       smcTokenRoot,
       smcFaucetTokenWallet
     );
+  });
+
+  it("chages Faucet balance", async () => {
+    await changeFaucetBalanceChunk(client, smcFaucet);
   });
 
   it("deploys and inits FaucetDeBot", async () => {

@@ -2,15 +2,12 @@ import { TonClient } from "@tonclient/core";
 import pkgTokenRoot from "../../ton-packages/RT.package";
 import pkgTokenWallet from "../../ton-packages/TTW.package";
 import { TonContract } from "@rsquad/ton-utils";
-import {
-  callThroughMultisig,
-  sendThroughMultisig,
-  waitForMessage,
-} from "@rsquad/ton-utils/dist/net";
+import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
+import * as fs from "fs";
 
 export default async (
   client: TonClient,
@@ -64,6 +61,8 @@ export default async (
   expect(
     (await smcTokenRoot.run({ functionName: "getWalletCode" })).value.value0
   ).to.be.eq(codeWallet);
+
+  fs.writeFileSync("./token-root-keys", JSON.stringify(smcTokenRoot.keys));
 
   return { smcTokenRoot };
 };
