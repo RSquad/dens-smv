@@ -23,7 +23,6 @@ struct NewProposal {
     string title;
     ProposalType proposalType;
     TvmCell specific;
-    TvmCell codePadawan;
     TvmCell state;
 }
 
@@ -173,7 +172,6 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
             title,
             ProposalType.Reserve,
             cellSpecific,
-            _codePadawan,
             _buildProposalState(codeProposal, _deployedProposalsCounter)
         );
         _newProposals.push(_newProposal);
@@ -206,16 +204,18 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
 
     function _deployProposals() private {
         if(_getBalancePendings == 0) {
-            for(uint8 i = 0; i < _newProposals.length; i++) {
-                new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
-                    _totalVotes,
-                    _newProposals[i].addrClient,
-                    _newProposals[i].title,
-                    _newProposals[i].proposalType,
-                    _newProposals[i].specific,
-                    _newProposals[i].codePadawan
-                );
-                _deployedProposalsCounter++;
+            if(_totalVotes > 1) {
+                for(uint8 i = 0; i < _newProposals.length; i++) {
+                    new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
+                        _totalVotes,
+                        _newProposals[i].addrClient,
+                        _newProposals[i].title,
+                        _newProposals[i].proposalType,
+                        _newProposals[i].specific,
+                        _codePadawan
+                    );
+                    _deployedProposalsCounter++;
+                }
             }
             delete _newProposals;
         }
