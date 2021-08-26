@@ -15,5 +15,5 @@ interface ISmvRoot {
     function getProposalInfo() external view returns (mapping (uint32 => ProposalInfo) proposals);
     function getPadawan(uint key) external view returns (PadawanData data);
 
-    function resolvePadawan(address owner) external view returns (address addrPadawan);
+    function resolvePadawan(address deployer, address owner) external view returns (address addrPadawan);
 }

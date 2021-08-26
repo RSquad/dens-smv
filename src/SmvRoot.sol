@@ -148,7 +148,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
     function deployPadawan(address owner) external onlyContract inited {
         require(msg.value >= DEPLOY_FEE + 2 ton);
         require(owner != address(0));
-        TvmCell state = _buildPadawanState(owner);
+        TvmCell state = _buildPadawanState(address(this), owner);
         new Padawan{stateInit: state, value: START_BALANCE + 2 ton}(_addrTokenRoot);
     }
 

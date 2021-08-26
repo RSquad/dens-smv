@@ -61,7 +61,7 @@ contract Proposal is Base, PadawanResolver, IProposal {
 
     /* Implements SMV algorithm and has vote function to receive ‘yes’ or ‘no’ votes from Voting Wallet. */
     function vote(address addrPadawanOwner, bool choice, uint32 votesCount) external override {
-        address addrPadawan = resolvePadawan(addrPadawanOwner);
+        address addrPadawan = resolvePadawan(_addrRoot, addrPadawanOwner);
         uint16 errorCode = 0;
 
         if (addrPadawan != msg.sender) {
@@ -157,14 +157,6 @@ contract Proposal is Base, PadawanResolver, IProposal {
 
     function _changeState(ProposalState state) private inline {
         _proposalInfo.state = state;
-    }
-
-    function _buildPadawanState(address owner) internal view override returns (TvmCell) {
-        return tvm.buildStateInit({
-            contr: Padawan,
-            varInit: {_deployer: _addrRoot, _owner: owner},
-            code: _codePadawan
-        });
     }
 
     function queryStatus() external override {
