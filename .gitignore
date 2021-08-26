@@ -7,13 +7,7 @@ k2
 k3
 k4
 k5
-faucet-debot-keys
-faucet-keys
-faucet-token-wallet-keys
-smv-debot-keys
-smv-root-keys
-smv-root-store-keys
-token-root-keys
+keys/**
 
 
 

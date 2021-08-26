@@ -23,8 +23,11 @@ export default async (client: TonClient) => {
 
   smcFaucetDebot.calcAddress();
 
-  fs.writeFileSync("./faucet-keys", JSON.stringify(smcFaucet.keys));
-  fs.writeFileSync("./faucet-debot-keys", JSON.stringify(smcFaucetDebot.keys));
+  fs.writeFileSync("./keys/faucet-keys", JSON.stringify(smcFaucet.keys));
+  fs.writeFileSync(
+    "./keys/faucet-debot-keys",
+    JSON.stringify(smcFaucetDebot.keys)
+  );
 
   return {
     smcFaucet,

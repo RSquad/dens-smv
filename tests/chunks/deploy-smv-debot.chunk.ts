@@ -82,7 +82,7 @@ export default async (
     }`
   );
 
-  fs.writeFileSync("./smv-debot-keys", JSON.stringify(keys));
+  fs.writeFileSync("./keys/smv-debot-keys", JSON.stringify(keys));
 
   return { smcSmvDebot };
 };

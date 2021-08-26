@@ -74,7 +74,7 @@ export default async (
   );
   expect(stored.addrFaucet, "addrFaucet is empty").to.be.not.eq(EMPTY_ADDRESS);
 
-  fs.writeFileSync("./smv-root-keys", JSON.stringify(keys));
+  fs.writeFileSync("./keys/smv-root-keys", JSON.stringify(keys));
 
   return { smcSmvRoot };
 };

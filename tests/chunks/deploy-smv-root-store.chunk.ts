@@ -84,7 +84,7 @@ export default async (
     expect(addr).to.not.be.eq(EMPTY_ADDRESS);
   });
 
-  fs.writeFileSync("./smv-root-store-keys", JSON.stringify(keys));
+  fs.writeFileSync("./keys/smv-root-store-keys", JSON.stringify(keys));
 
   return { smcSmvRootStore };
 };

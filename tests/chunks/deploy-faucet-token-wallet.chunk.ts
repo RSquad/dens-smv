@@ -43,7 +43,7 @@ export default async (
   console.log(`FaucetTokenWallet deployed: ${smcFaucetTokenWallet.address}`);
 
   fs.writeFileSync(
-    "./faucet-token-wallet-keys",
+    "./keys/faucet-token-wallet-keys",
     JSON.stringify(smcTokenRoot.keys)
   );
 
