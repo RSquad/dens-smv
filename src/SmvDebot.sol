@@ -46,6 +46,8 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         uint32 totalVotes;
         uint32 lockedVotes;
     }
+
+    bool _inited;
     
     address _store;
     address _smvRoot;
@@ -81,19 +83,13 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         _;
     }
 
-    constructor(address SmvRoot, address store, address faucetDebot) public {
-        tvm.accept();
-        _smvRoot = SmvRoot;
-        _store = store;
-        _faucetDebot = faucetDebot;
-        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
-        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
-        SmvRootStore(store).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
-    }
-
     /* -------------------------------------------------------------------------- */
     /*                            ANCHOR Initialization                           */
     /* -------------------------------------------------------------------------- */
+
+    constructor() public {
+        tvm.accept();
+    }
 
     function getDebotInfo() public functionID(0xDEB) override view returns(
         string name,
@@ -108,7 +104,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         bytes icon
     ) {
         name = "DeNS SMV Debot";
-        version = "2.0.0";
+        version = "1.0.0";
         publisher = "RSquad";
         key = "Voting system for DeNS";
         author = "RSquad";
@@ -118,9 +114,20 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         dabi = m_debotAbi.get();
         icon = "";
     }
-
     function getRequiredInterfaces() public view override returns (uint256[] interfaces) {
         return [ Terminal.ID, Menu.ID, AddressInput.ID, ConfirmInput.ID, UserInfo.ID ];
+    }
+
+    function init(address smvRoot, address store, address faucetDebot) public {
+        require(_inited == false);
+        tvm.accept();
+        _smvRoot = smvRoot;
+        _store = store;
+        _faucetDebot = faucetDebot;
+        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
+        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
+        SmvRootStore(store).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
+        _inited == true;
     }
 
     function start() public override {
@@ -439,7 +446,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             time: 0,
             expire: 0,
             sign: false
-        }(_multisig);
+        }(_smvRoot, _multisig);
     }
     function setPadawanAddress(address addrPadawan) public {
         _addrPadawan = addrPadawan;
@@ -699,7 +706,5 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
 
     function onCodeUpgrade() internal override {
         tvm.resetStorage();
-        // _pub = ;
-        // _sec = ;
     }
 }

@@ -5,7 +5,7 @@ import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import * as fs from "fs";
-import { NETWORK_MAP } from "@rsquad/ton-utils/dist/constants";
+import { EMPTY_ADDRESS, NETWORK_MAP } from "@rsquad/ton-utils/dist/constants";
 
 export default async (
   client: TonClient,
@@ -41,13 +41,7 @@ export default async (
     await sleep(30000);
   }
 
-  await smcSmvDebot.deploy({
-    input: {
-      SmvRoot: smcSmvRoot.address,
-      store: smcSmvRootStore.address,
-      faucetDebot: smcFaucetDebot.address,
-    },
-  });
+  await smcSmvDebot.deploy();
 
   await new Promise<void>((resolve) => {
     fs.readFile(
@@ -70,6 +64,15 @@ export default async (
         resolve();
       }
     );
+  });
+
+  await smcSmvDebot.call({
+    functionName: "init",
+    input: {
+      smvRoot: EMPTY_ADDRESS,
+      store: smcSmvRootStore.address,
+      faucetDebot: smcFaucetDebot.address,
+    },
   });
 
   const isSmcSmvDebotActive = await isAddrActive(client, smcSmvDebot.address);

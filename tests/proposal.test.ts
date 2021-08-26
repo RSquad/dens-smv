@@ -158,6 +158,7 @@ describe("Proposal test", () => {
       await smcSmvRoot.run({
         functionName: "resolvePadawan",
         input: {
+          deployer: smcSmvRoot.address,
           owner: smcSafeMultisigWallet.address,
         },
       })
