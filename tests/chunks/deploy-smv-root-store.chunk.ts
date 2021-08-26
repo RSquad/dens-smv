@@ -14,11 +14,12 @@ export default async (
   smcFaucet: TonContract,
   smcTokenRoot: TonContract
 ) => {
+  const keys = await client.crypto.generate_random_sign_keys();
   const smcSmvRootStore = new TonContract({
     client,
     name: "SmvRootStore",
     tonPackage: pkgSmvRootStore,
-    keys: await client.crypto.generate_random_sign_keys(),
+    keys,
   });
 
   await smcSmvRootStore.calcAddress();
@@ -38,6 +39,8 @@ export default async (
   expect(isSmcSmvRootStoreActive).to.be.true;
 
   console.log(`SmvRootStore address: ${smcSmvRootStore.address}`);
+  console.log(`SmvRootStore public: ${keys.public}`);
+  console.log(`SmvRootStore secret: ${keys.secret}`);
 
   await smcSmvRootStore.call({
     functionName: "setProposalCode",
