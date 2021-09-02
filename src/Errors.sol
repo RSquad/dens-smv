@@ -28,6 +28,9 @@ library Errors {
     uint32 constant DEPOSIT_WITH_SUCH_ID_EXISTS =       503;
     uint32 constant PENDING_DEPOSIT_ALREADY_EXISTS =    504;
     uint32 constant NOT_ENOUGH_VALUE_TO_VOTE =          505;
+    uint32 constant TOO_MUCH_ACTIVE_PROPOSALS =          600;
+
+    
 
 /* --------------------------- ANCHOR common 10** --------------------------- */
 

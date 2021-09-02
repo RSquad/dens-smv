@@ -7,6 +7,7 @@ import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import { EMPTY_ADDRESS, EMPTY_CODE } from "@rsquad/ton-utils/dist/constants";
+import * as fs from "fs";
 
 export default async (
   client: TonClient,
@@ -14,11 +15,12 @@ export default async (
   smcFaucet: TonContract,
   smcTokenRoot: TonContract
 ) => {
+  const keys = await client.crypto.generate_random_sign_keys();
   const smcSmvRootStore = new TonContract({
     client,
     name: "SmvRootStore",
     tonPackage: pkgSmvRootStore,
-    keys: await client.crypto.generate_random_sign_keys(),
+    keys,
   });
 
   await smcSmvRootStore.calcAddress();
@@ -38,6 +40,8 @@ export default async (
   expect(isSmcSmvRootStoreActive).to.be.true;
 
   console.log(`SmvRootStore address: ${smcSmvRootStore.address}`);
+  console.log(`SmvRootStore public: ${keys.public}`);
+  console.log(`SmvRootStore secret: ${keys.secret}`);
 
   await smcSmvRootStore.call({
     functionName: "setProposalCode",
@@ -79,6 +83,12 @@ export default async (
   addrs.forEach((addr) => {
     expect(addr).to.not.be.eq(EMPTY_ADDRESS);
   });
+
+  fs.writeFileSync("./creds/smv-root-store-keys", JSON.stringify(keys));
+  fs.writeFileSync(
+    "./creds/smv-root-store-address",
+    JSON.stringify({ address: smcSmvRootStore.address })
+  );
 
   return { smcSmvRootStore };
 };

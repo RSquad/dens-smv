@@ -23,8 +23,6 @@ export default async (
     keys,
   });
 
-  fs.writeFileSync("./dk", JSON.stringify(keys));
-
   await smcSmvDebot.calcAddress();
 
   console.log(`SmvDebot deploy: ${smcSmvDebot.address}`);
@@ -34,20 +32,14 @@ export default async (
   await sendThroughMultisig({
     smcSafeMultisigWallet,
     dest: smcSmvDebot.address,
-    value: 100_000_000_000,
+    value: 5_000_000_000,
   });
 
   if (process.env.NETWORK !== "LOCAL") {
     await sleep(30000);
   }
 
-  await smcSmvDebot.deploy({
-    input: {
-      SmvRoot: smcSmvRoot.address,
-      store: smcSmvRootStore.address,
-      faucetDebot: smcFaucetDebot.address,
-    },
-  });
+  await smcSmvDebot.deploy();
 
   await new Promise<void>((resolve) => {
     fs.readFile(
@@ -72,6 +64,15 @@ export default async (
     );
   });
 
+  await smcSmvDebot.call({
+    functionName: "init",
+    input: {
+      smvRoot: smcSmvRoot.address,
+      store: smcSmvRootStore.address,
+      faucetDebot: smcFaucetDebot.address,
+    },
+  });
+
   const isSmcSmvDebotActive = await isAddrActive(client, smcSmvDebot.address);
   expect(isSmcSmvDebotActive).to.be.true;
 
@@ -79,6 +80,12 @@ export default async (
     `tonos-cli --url ${NETWORK_MAP[process.env.NETWORK][0]} debot fetch ${
       smcSmvDebot.address
     }`
+  );
+
+  fs.writeFileSync("./creds/smv-debot-keys", JSON.stringify(keys));
+  fs.writeFileSync(
+    "./creds/smv-debot-address",
+    JSON.stringify({ address: smcSmvDebot.address })
   );
 
   return { smcSmvDebot };

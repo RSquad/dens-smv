@@ -15,7 +15,7 @@ export default async (
   await sendThroughMultisig({
     smcSafeMultisigWallet,
     dest: smcFaucet.address,
-    value: 20_000_000_000,
+    value: 5_000_000_000,
   });
 
   await smcFaucet.deploy({
@@ -41,24 +41,7 @@ export default async (
   console.log(`public: ${smcFaucet.keys.public}`);
   console.log(`secret: ${smcFaucet.keys.secret}`);
 
-  fs.writeFileSync("./fk", JSON.stringify(smcFaucet.keys));
-
-  let keys = await client.crypto.generate_random_sign_keys();
-  await smcFaucet.call({
-    functionName: "changeBalance",
-    input: {
-      pubkey: `0x${keys.public}`,
-      value: 1000,
-    },
-  });
-
-  const balances = (await smcFaucet.run({ functionName: "_balances" })).value
-    ._balances;
-  expect(balances[`0x${keys.public}`]).to.be.eq("1000");
-
-  logPubGetter("Faucet balances updated", smcFaucet, "_balances");
-
-  fs.writeFileSync("./k1", JSON.stringify(keys));
+  fs.writeFileSync("./creds/faucet-keys", JSON.stringify(smcFaucet.keys));
 
   return { smcFaucet };
 };

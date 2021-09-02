@@ -7,16 +7,16 @@ import '../Padawan.sol';
 contract PadawanResolver {
     TvmCell _codePadawan;
 
-    function resolvePadawan(address owner) public view returns (address addrPadawan) {
-        TvmCell state = _buildPadawanState(owner);
+    function resolvePadawan(address deployer, address owner) public view returns (address addrPadawan) {
+        TvmCell state = _buildPadawanState(deployer, owner);
         uint256 hashState = tvm.hash(state);
         addrPadawan = address.makeAddrStd(0, hashState);
     }
 
-    function _buildPadawanState(address owner) internal virtual view returns (TvmCell) {
+    function _buildPadawanState(address deployer, address owner) internal virtual view returns (TvmCell) {
         return tvm.buildStateInit({
             contr: Padawan,
-            varInit: {_deployer: address(this), _owner: owner},
+            varInit: {_deployer: deployer, _owner: owner},
             code: _codePadawan
         });
     }

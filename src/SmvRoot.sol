@@ -23,7 +23,6 @@ struct NewProposal {
     string title;
     ProposalType proposalType;
     TvmCell specific;
-    TvmCell codePadawan;
     TvmCell state;
 }
 
@@ -85,25 +84,26 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         }
         require(addrStore != address(0), Errors.STORE_SHOULD_BE_NOT_NULL);
         tvm.accept();
-        
-        if (addrStore != address(0)) {
-            _addrStore = addrStore;
-            SmvRootStore(_addrStore).queryCode
-                {value: 0.2 ton, bounce: true}
-                (ContractCode.Proposal);
-            SmvRootStore(_addrStore).queryCode
-                {value: 0.2 ton, bounce: true}
-                (ContractCode.Padawan);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.Client);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.TokenRoot);
-            SmvRootStore(_addrStore).queryAddr
-                {value: 0.2 ton, bounce: true}
-                (ContractAddr.Faucet);
-        }
+        _initialize(addrStore);
+    }
+
+    function _initialize(address addrStore) private {
+        _addrStore = addrStore;
+        SmvRootStore(_addrStore).queryCode
+            {value: 0.2 ton, bounce: true}
+            (ContractCode.Proposal);
+        SmvRootStore(_addrStore).queryCode
+            {value: 0.2 ton, bounce: true}
+            (ContractCode.Padawan);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.Client);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.TokenRoot);
+        SmvRootStore(_addrStore).queryAddr
+            {value: 0.2 ton, bounce: true}
+            (ContractAddr.Faucet);
 
         _createChecks();
     }
@@ -150,7 +150,7 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
     function deployPadawan(address owner) external onlyContract inited {
         require(msg.value >= DEPLOY_FEE + 2 ton);
         require(owner != address(0));
-        TvmCell state = _buildPadawanState(owner);
+        TvmCell state = _buildPadawanState(address(this), owner);
         new Padawan{stateInit: state, value: START_BALANCE + 2 ton}(_addrTokenRoot);
     }
 
@@ -175,7 +175,6 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
             title,
             ProposalType.Reserve,
             cellSpecific,
-            _codePadawan,
             _buildProposalState(codeProposal, _deployedProposalsCounter)
         );
         _newProposals.push(_newProposal);
@@ -208,22 +207,26 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
 
     function _deployProposals() private {
         if(_getBalancePendings == 0) {
-            for(uint8 i = 0; i < _newProposals.length; i++) {
-                new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
-                    _totalVotes,
-                    _newProposals[i].addrClient,
-                    _newProposals[i].title,
-                    _newProposals[i].proposalType,
-                    _newProposals[i].specific,
-                    _newProposals[i].codePadawan
-                );
-                _deployedProposalsCounter++;
+            if(_totalVotes > 1) {
+                for(uint8 i = 0; i < _newProposals.length; i++) {
+                    new Proposal {stateInit: _newProposals[i].state, value: START_BALANCE}(
+                        _totalVotes,
+                        _newProposals[i].addrClient,
+                        _newProposals[i].title,
+                        _newProposals[i].proposalType,
+                        _newProposals[i].specific,
+                        _codePadawan
+                    );
+                    _deployedProposalsCounter++;
+                }
             }
             delete _newProposals;
         }
     }
 
-    // Getters
+/* -------------------------------------------------------------------------- */
+/*                               ANCHOR getters                               */
+/* -------------------------------------------------------------------------- */
 
     function getStored() public view returns (
         TvmCell codePadawan,
@@ -245,4 +248,21 @@ contract SmvRoot is Base, PadawanResolver, ProposalResolver, ISmvRootStoreCb, IF
         deployedPadawansCounter = _deployedPadawansCounter;
         deployedProposalsCounter = _deployedProposalsCounter;
     }
+
+/* -------------------------------------------------------------------------- */
+/*                               ANCHOR setcode                               */
+/* -------------------------------------------------------------------------- */
+
+    function update(address addrStore, TvmCell code) public signed {
+        tvm.accept();
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+        onCodeUpgrade(addrStore);
+    }
+
+    function onCodeUpgrade(address addrStore) private {
+        tvm.resetStorage();
+        _initialize(addrStore);
+    }
+
 }

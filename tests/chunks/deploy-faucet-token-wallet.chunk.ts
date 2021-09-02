@@ -1,10 +1,6 @@
 import { TonClient } from "@tonclient/core";
-import pkgTokenRoot from "../../ton-packages/RT.package";
 import pkgTokenWallet from "../../ton-packages/TTW.package";
-import pkgFaucetDebot from "../../ton-packages/FaucetDebot.package";
 import { sleep, TonContract } from "@rsquad/ton-utils";
-import { sendThroughMultisig } from "@rsquad/ton-utils/dist/net";
-import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import * as fs from "fs";
@@ -20,8 +16,6 @@ export default async (
     tonPackage: pkgTokenWallet,
     keys: smcTokenRoot.keys,
   });
-
-  fs.writeFileSync("./ftwk", JSON.stringify(smcTokenRoot.keys));
 
   const deployFaucetTokenWallet = await smcTokenRoot.call({
     functionName: "deployWallet",
@@ -47,8 +41,11 @@ export default async (
   expect(isSmcFaucetTokenWalletActive).to.be.true;
 
   console.log(`FaucetTokenWallet deployed: ${smcFaucetTokenWallet.address}`);
-  console.log(`public: ${smcFaucetTokenWallet.keys.public}`);
-  console.log(`secret: ${smcFaucetTokenWallet.keys.secret}`);
+
+  fs.writeFileSync(
+    "./creds/faucet-token-wallet-keys",
+    JSON.stringify(smcTokenRoot.keys)
+  );
 
   return { smcFaucetTokenWallet };
 };

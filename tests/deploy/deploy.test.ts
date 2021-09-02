@@ -1,16 +1,15 @@
 import { TonClient } from "@tonclient/core";
-import pkgSafeMultisigWallet from "../ton-packages/SafeMultisigWallet.package";
+import pkgSafeMultisigWallet from "../../ton-packages/SafeMultisigWallet.package";
 import { createClient, TonContract } from "@rsquad/ton-utils";
-import initFaucetChunk from "./chunks/init-faucet.chunk";
-import deployTokenRootChunk from "./chunks/deploy-token-root.chunk";
-import deployFaucetTokenWalletChunk from "./chunks/deploy-faucet-token-wallet.chunk";
-import deployFaucetChunk from "./chunks/deploy-faucet.chunk";
-import deployFaucetDebotChunk from "./chunks/deploy-faucet-debot.chunk";
-import deploySmvRootStoreChunk from "./chunks/deploy-smv-root-store.chunk";
-import deploySmvRootChunk from "./chunks/deploy-smv-root.chunk";
-import deploySmvDebotChunk from "./chunks/deploy-smv-debot.chunk";
-
-describe("Debot test", () => {
+import initFaucetChunk from "./../chunks/init-faucet.chunk";
+import deployTokenRootChunk from "./../chunks/deploy-token-root.chunk";
+import deployFaucetTokenWalletChunk from "./../chunks/deploy-faucet-token-wallet.chunk";
+import deployFaucetChunk from "./../chunks/deploy-faucet.chunk";
+import deployFaucetDebotChunk from "./../chunks/deploy-faucet-debot.chunk";
+import deploySmvRootStoreChunk from "./../chunks/deploy-smv-root-store.chunk";
+import deploySmvRootChunk from "./../chunks/deploy-smv-root.chunk";
+import deploySmvDebotChunk from "./../chunks/deploy-smv-debot.chunk";
+describe("Deploy", () => {
   let client: TonClient;
   let smcSafeMultisigWallet: TonContract;
   let smcSmvRootStore: TonContract;
@@ -96,7 +95,7 @@ describe("Debot test", () => {
   });
 
   it("deploys and inits SmvDebot", async () => {
-    await deploySmvDebotChunk(
+    const result = await deploySmvDebotChunk(
       client,
       smcSafeMultisigWallet,
       smcSmvDebot,
@@ -104,5 +103,6 @@ describe("Debot test", () => {
       smcSmvRootStore,
       smcFaucetDebot
     );
+    smcSmvDebot = result.smcSmvDebot;
   });
 });
