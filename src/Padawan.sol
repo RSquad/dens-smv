@@ -23,7 +23,8 @@ contract Padawan is Base {
     TipAccount public _tipAccount;
     address _returnTo;
 
-    mapping(address => uint32) _activeProposals;
+    mapping(address => uint32) public _activeProposals;
+    uint32 public _activeProposalsCount;
 
     uint32 _requestedVotes;
     uint32 _totalVotes;
@@ -54,6 +55,7 @@ contract Padawan is Base {
     /// @notice Allows user to vote for proposal.
     function vote(address proposal, bool choice, uint32 votes) external onlyOwner {
         require(msg.value >= VOTE_FEE, Errors.MSG_VALUE_TOO_LOW);
+        require(_activeProposalsCount <= 150, Errors.TOO_MUCH_ACTIVE_PROPOSALS);
         optional(uint32) optActiveProposal = _activeProposals.fetch(proposal);
 
         uint32 activeProposalVotes = optActiveProposal.hasValue() ? optActiveProposal.get() : 0;
@@ -63,6 +65,7 @@ contract Padawan is Base {
         // TODO: better to remove
         if (activeProposalVotes == 0) {
             _activeProposals[proposal] = 0;
+            _activeProposalsCount += 1;
         }
         
         IProposal(proposal).vote
@@ -131,6 +134,7 @@ contract Padawan is Base {
 
         if (state >= ProposalState.Ended) {
             delete _activeProposals[msg.sender];
+            _activeProposalsCount -= 1;
             _updateLockedVotes();
         }
 
