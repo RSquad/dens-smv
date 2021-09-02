@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.7](https://github.com/RSquad/dens-smv/compare/v0.0.6...v0.0.7) (2021-09-02)
+
+
+### Features
+
+* add debot setcode ([53fc739](https://github.com/RSquad/dens-smv/commit/53fc739bcff76ab69f8570d6188131249b44e0c6))
+* add max active proposals count ([0f86f17](https://github.com/RSquad/dens-smv/commit/0f86f17d6a9915bed6cbb796ec07a733026cfcad))
+* add SmvRoot update ([5ca29e9](https://github.com/RSquad/dens-smv/commit/5ca29e9054de02124403c6f1bf215430c26631d3))
+* add upgrade debot script ([e51006c](https://github.com/RSquad/dens-smv/commit/e51006c272b89b1174774672adf7854dcfd1b114))
+* Proposals cannot be deployed if there are no distributed tokens ([2172128](https://github.com/RSquad/dens-smv/commit/2172128c95a7e905afdbf190203dcb76b3f3530b))
+* update gitignore ([a3f8ce2](https://github.com/RSquad/dens-smv/commit/a3f8ce2c6fab8d3cfa7bb4f8a065c16297cdda41))
+
 ### [0.0.6](https://github.com/RSquad/dens-smv/compare/v0.0.5...v0.0.6) (2021-08-25)
 
 
