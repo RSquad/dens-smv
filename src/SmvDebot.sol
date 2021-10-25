@@ -216,8 +216,12 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
                 _proposals[i].title,
                 proposalTypeToString(_proposals[i].proposalType),
                 proposalStateToString(_proposals[i].state)));
-            if(_proposals[i].state <= ProposalState.OnVoting && int256(int256(_proposals[i].end - uint32(now))) > 0) {
+            int256 n = int256(_proposals[i].end) - int256(now);
+            if(_proposals[i].state <= ProposalState.OnVoting && n > 0) {
                 str.append(format(' Ends in {} seconds.', _proposals[i].end - uint32(now)));
+            }
+            if(_proposals[i].state <= ProposalState.OnVoting && n <= 0) {
+                str.append(' Ended. Wait for calculation execution');
             }
             items.push(MenuItem(str, "", tvm.functionId(voteForProposal)));
         }

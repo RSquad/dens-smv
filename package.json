@@ -16,6 +16,7 @@
     "test:dev:compile": "npm run compile && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha --exit -r ts-node/register -r dotenv/config -t 300000 'tests/dev/*.test.ts'",
     "test:deploy:compile": "npm run compile && npm run test:deploy",
     "test:upgrade:compile": "npm run compile && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha --exit -r ts-node/register -r dotenv/config -t 300000 'tests/upgrade/*.test.ts'",
+    "compile:script:deploy": "npm run compile && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha --exit -r ts-node/register -r dotenv/config -t 300000 'tests/deploy/only-debot.deploy.ts'",
     "release": "standard-version",
     "release:patch": "npm run release -- --release-as patch",
     "release:minor": "npm run release -- --release-as minor",
