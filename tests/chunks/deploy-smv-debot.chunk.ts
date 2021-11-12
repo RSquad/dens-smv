@@ -12,8 +12,8 @@ export default async (
   smcSafeMultisigWallet: TonContract,
   smcSmvDebot: TonContract,
   smcSmvRoot: TonContract,
-  smcSmvRootStore: TonContract,
-  smcFaucetDebot: TonContract
+  smcTokenRoot: TonContract,
+  smcFaucet: TonContract
 ) => {
   const keys = await client.crypto.generate_random_sign_keys();
   smcSmvDebot = new TonContract({
@@ -68,8 +68,8 @@ export default async (
     functionName: "init",
     input: {
       smvRoot: smcSmvRoot.address,
-      store: smcSmvRootStore.address,
-      faucetDebot: smcFaucetDebot.address,
+      faucet: smcFaucet.address,
+      tokenRoot: smcTokenRoot.address,
     },
   });
 
@@ -80,12 +80,6 @@ export default async (
     `tonos-cli --url ${NETWORK_MAP[process.env.NETWORK][0]} debot fetch ${
       smcSmvDebot.address
     }`
-  );
-
-  fs.writeFileSync("./creds/smv-debot-keys", JSON.stringify(keys));
-  fs.writeFileSync(
-    "./creds/smv-debot-address",
-    JSON.stringify({ address: smcSmvDebot.address })
   );
 
   return { smcSmvDebot };

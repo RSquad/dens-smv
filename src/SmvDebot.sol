@@ -13,7 +13,9 @@ import "./interfaces/UserInfo.sol";
 import "./interfaces/AmountInput.sol";
 import "./interfaces/Sdk.sol";
 import "./interfaces/Upgradable.sol";
+import "./interfaces/SigningBoxInput.sol";
 import "./interfaces/ISmvRoot.sol";
+import "./interfaces/IFaucet.sol";
 import "SmvRootStore.sol";
 
 
@@ -39,7 +41,9 @@ interface IMultisig {
     external;
 }
 
-contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
+contract DensSmvDebot is Debot, Upgradable {
+
+    optional(uint256) none;
 
     struct PadawanVotes {
         uint32 reqVotes;
@@ -47,29 +51,29 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         uint32 lockedVotes;
     }
 
+    uint32 _keyHandle;
+
     bool _inited;
     
-    address _store;
+    address _faucet;
     address _smvRoot;
     address _multisig;
-    address _faucetDebot;
+    uint256 _pubkey;
 
-    address _addrPadawan;
-    address _addrPadawanTokenWallet;
+
+    uint128 _tokensToClaim;
+
+    address _tokenRoot;
+    address _padawan;
+    bool _padawanExists;
+    address _padawanTokenWallet;
     PadawanVotes _padawanVotes;
 
-    uint128 _balanceTIP3;
     address _userTokenWallet;
-    
-    uint32 _votes;
-    bool _yesNo;
+    bool _userTokenWalletExists;
 
-
-    TvmCell _codeProposal;
     ProposalInfo[] _proposals;
     address[] _proposalAddresses;
-
-    TvmCell _codePadawan;
 
     struct ReserveProposal {
         string title;
@@ -78,18 +82,9 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     }
     ReserveProposal _newReserveProposal;
 
-    modifier onlyStore() {
-        require(msg.sender == _store);
-        _;
-    }
-
     /* -------------------------------------------------------------------------- */
     /*                            ANCHOR Initialization                           */
     /* -------------------------------------------------------------------------- */
-
-    constructor() public {
-        tvm.accept();
-    }
 
     function getDebotInfo() public functionID(0xDEB) override view returns(
         string name,
@@ -115,48 +110,282 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         icon = "";
     }
     function getRequiredInterfaces() public view override returns (uint256[] interfaces) {
-        return [ Terminal.ID, Menu.ID, AddressInput.ID, ConfirmInput.ID, UserInfo.ID ];
+        return [ Terminal.ID, Menu.ID, AddressInput.ID, ConfirmInput.ID, UserInfo.ID, SigningBoxInput.ID ];
     }
 
-    function init(address smvRoot, address store, address faucetDebot) public {
+    function init(address smvRoot, address faucet, address tokenRoot) public {
         require(_inited == false);
         tvm.accept();
         _smvRoot = smvRoot;
-        _store = store;
-        _faucetDebot = faucetDebot;
-        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Proposal);
-        SmvRootStore(store).queryCode{value: 0.2 ton, bounce: true}(ContractCode.Padawan);
-        SmvRootStore(store).queryAddr{value: 0.2 ton, bounce: true}(ContractAddr.TokenRoot);
+        _faucet = faucet;
+        _tokenRoot = tokenRoot;
         _inited == true;
     }
 
+
+
+
+
+
+
+
+
+
     function start() public override {
         UserInfo.getAccount(tvm.functionId(attachMultisig));
-        this.mainMenu();
+        UserInfo.getPublicKey(tvm.functionId(attachPubkey));
+        if(_keyHandle == 0) {
+            uint[] none_;
+            SigningBoxInput.get(tvm.functionId(setKeyHandle), "Enter keys to sign all operations.", none_);
+        }
+        this.getTokensToClaim();
+        this.getUserWalletAddress();
+        this.resolvePadawan();
+        this.mainMenu(0);
+    }
+    function setKeyHandle(uint32 handle) public {
+        _keyHandle = handle;
+    }
+    function getTokensToClaim() public {
+        IFaucet(_faucet).getBalance{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(getTokensToClaimCb),
+            onErrorId: tvm.functionId(onErrorGetTokensToClaim),
+            time: 0,
+            expire: 0,
+            pubkey: none,
+            sign: false
+        }(_pubkey);
+    }
+    function getTokensToClaimCb(uint32 value) public {
+        _tokensToClaim = value;
+    }
+    function getUserWalletAddress() public {
+        ITokenRoot(_tokenRoot).getWalletAddress{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(setUserTokenWallet),
+            onErrorId: tvm.functionId(onError),
+            time: 0,
+            expire: 0,
+            pubkey: none,
+            sign: false
+        }(_pubkey, address(0));
+    }
+    function setUserTokenWallet(address value) public {
+        _userTokenWallet = value;
+    }
+    function checkUserTokenWalletExists(uint32 index) public { index;
+        Sdk.getAccountType(tvm.functionId(checkUserTokenWalletExistsCb), _userTokenWallet);
+    }
+    function checkUserTokenWalletExistsCb(int8 acc_type) public {
+        if (acc_type != -1 && acc_type != 0 && acc_type != 2) {
+            _userTokenWalletExists = true;
+        }
+    }
+    function resolvePadawan() public view {
+        ISmvRoot(_smvRoot).resolvePadawan{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(savePadawanAddress),
+            onErrorId: 0,
+            time: 0,
+            expire: 0,
+            sign: false
+        }(_smvRoot, _multisig);
+    }
+    function savePadawanAddress(address addrPadawan) public {
+        _padawan = addrPadawan;
+        Sdk.getAccountType(tvm.functionId(checkPadawan), addrPadawan);
+    }
+    function checkPadawan(int8 acc_type) public {
+        if (acc_type != -1 && acc_type != 0 && acc_type != 2) {
+            _padawanExists = true;
+        }
     }
 
-    function mainMenuIndex(uint32 index) public { index;
-        mainMenu();
-    }
 
-    function mainMenu() public {
+
+
+
+
+
+
+
+
+    function mainMenu(uint32 index) public { index;
         MenuItem[] items;
         items.push(MenuItem("Vote for Proposals", "", tvm.functionId(getProposals)));
         items.push(MenuItem("Create Proposal", "", tvm.functionId(createProposal)));
-        items.push(MenuItem("Manage Votes", "", tvm.functionId(menuPadawan)));
-        items.push(MenuItem("Get Votes", "", tvm.functionId(giveMyVotes)));
+        if(_tokensToClaim > 0) {
+            Terminal.print(0, format("You have {} votes to claim", _tokensToClaim));
+            items.push(MenuItem("Get tokens", "", tvm.functionId(claimTokens_step1)));
+        }
+        if(_tokensToClaim == 0 && !_userTokenWalletExists) {
+            Terminal.print(0, format("Unfortunately, you have not been allocated any votes. Contact your subgovernance to get them."));
+        }
+        if(_tokensToClaim == 0 && _padawanExists) {
+            items.push(MenuItem("Manage Votes", "", tvm.functionId(menuPadawan)));
+        }
         Menu.select("What do you want to do?", "", items);
     }
 
-    function giveMyVotes(uint32 index) public { index;
-        IFaucetDebot(_faucetDebot).debotEnterPoint(address(this));
+
+
+
+
+
+
+
+
+
+    function claimTokens_step1(uint32 index) public { index;
+        Terminal.print(0, "In order to start voting, you need to perform 5 simple steps.\n1. Create a TIP-3 wallet.\n2. Get the DeNS tokens allocated for you.\n3. Create a special wallet for voting calls Padawan.\n4. Transfer DeNS tokens to it.\n5. Make a deposit.");
+        Terminal.print(0, "It looks more complicated than it really is! Let me guide you through these steps easily.");
+
+        Terminal.print(0, "Step 1 of 5. Creating a TIP-3 wallet.");
+        if(_userTokenWalletExists) {
+            Terminal.print(tvm.functionId(claimTokens_step4), "You already have a TIP-3 wallet.");
+        } else {
+            Terminal.print(tvm.functionId(claimTokens_step2), "Please sign the message to create TIP-3 wallet.");
+        }
+    }
+    function claimTokens_step2() public {
+        IFaucet(_faucet).deployWallet{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(claimTokens_step3),
+            onErrorId: tvm.functionId(onError),
+            time: 0,
+            expire: 0,
+            pubkey: 0,
+            sign: true,
+            signBoxHandle: _keyHandle
+        }();
     }
 
-    /* -------------------------------------------------------------------------- */
-    /*                              ANCHOR Proposal                               */
-    /* -------------------------------------------------------------------------- */
+    function claimTokens_step3() public {
+        _userTokenWalletExists = true;
+        Terminal.print(0, "TIP-3 wallet has been deployed!");
+        Terminal.print(0, "Step 2 of 5. Receiving tokens.");
+        Terminal.print(tvm.functionId(claimTokens_step4), format("You have {} DeNS tokens allocated to you. Please sign the message to recieve them.", _tokensToClaim));
+    }
+    function claimTokens_step4() public {
+        IFaucet(_faucet).claimTokens{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(claimTokens_step5),
+            onErrorId: tvm.functionId(onError),
+            time: 0,
+            expire: 0,
+            pubkey: 0,
+            sign: true,
+            signBoxHandle: _keyHandle
+        }(_userTokenWallet);
+    }
+    function claimTokens_step5() public {
+        Terminal.print(0, format("Well done! You have recieved {} DeNS tokens!", _tokensToClaim));
+        _tokensToClaim = 0;
+        Terminal.print(0, "Step 3 of 5. Creating a padawan.");
+        if(_padawanExists) {
+            Terminal.print(tvm.functionId(claimTokens_step8), "You already have padawan.");
+        } else {
+            Terminal.print(tvm.functionId(claimTokens_step6), "Please sign next message to create padawan.");
+        }
+    }
+    function claimTokens_step6() public {
+        TvmCell payload = tvm.encodeBody(ISmvRoot.deployPadawan, _multisig);
+        IMultisig(_multisig).sendTransaction{
+            abiVer: 2,
+            extMsg: true,
+            sign: true,
+            pubkey: none,
+            time: uint64(now),
+            expire: 0,
+            callbackId: tvm.functionId(claimTokens_step7),
+            onErrorId: tvm.functionId(onError),
+            signBoxHandle: _keyHandle
+        }(_smvRoot, 6 ton, false, 3, payload);
+    }
+    function claimTokens_step7() public {
+        _padawanExists = true;
+        Terminal.print(tvm.functionId(claimTokens_step8), "Allright! Padawan has been created!");
+    }
+    function claimTokens_step8() public {
+        IPadawan(_padawan).getAll{
+            abiVer: 2,
+            extMsg: true,
+            callbackId: tvm.functionId(claimTokens_step9),
+            onErrorId: 0,
+            time: 0,
+            expire: 0,
+            sign: false
+        }();
+    }
+    function claimTokens_step9(TipAccount tipAccount, uint32 reqVotes, uint32 totalVotes, uint32 lockedVotes) public {
+        _padawanTokenWallet = tipAccount.addr;
+        _padawanVotes.reqVotes = reqVotes;
+        _padawanVotes.totalVotes = totalVotes;
+        _padawanVotes.lockedVotes = lockedVotes;
+        this.claimTokens_step10();
+    }
+    function claimTokens_step10() public {
+        Terminal.print(0, "Step 4 of 5. Transferring tokens.");
+        Terminal.print(tvm.functionId(claimTokens_step11), "You're almost done. Now we need to transfer tokens from you TIP-3 wallet to you newly created padawan. Please sign next message.");
+    }
+    function claimTokens_step11() public {
+        ITokenWallet(_userTokenWallet).getBalance{
+            abiVer: 2,
+            extMsg: true,
+            sign: false,
+            callbackId: tvm.functionId(claimTokens_step12),
+            onErrorId: tvm.functionId(onError),
+            time: uint32(now),
+            expire: 0,
+            pubkey: none
+        }();
+    }
+    function claimTokens_step12(uint128 balance) public {
+        ITokenWallet(_userTokenWallet).transfer{
+            abiVer: 2,
+            extMsg: true,
+            sign: true,
+            callbackId: tvm.functionId(claimTokens_step13),
+            onErrorId: tvm.functionId(onError),
+            time: uint32(now),
+            expire: 0,
+            pubkey: 0,
+            signBoxHandle: _keyHandle
+        }(_padawanTokenWallet, _padawanTokenWallet, balance, 0.15 ton, false);
+    }
+    function claimTokens_step13() public {
+        Terminal.print(0, "Great job! Tokens have been transferred from your TIP-3 wallet to padawan.");
+        Terminal.print(0, "Step 5 of 5. Depositing.");
+        Terminal.print(tvm.functionId(claimTokens_step14), "The last thing that we have to do is deposit tokens. Please sign next message.");
+    }
+    function claimTokens_step14() public {
+        TvmCell payload = tvm.encodeBody(IPadawan.depositTokens);
+        callMultisig(payload, _padawan, 1.5 ton, tvm.functionId(claimTokens_step15), 0);
+    }
+    function claimTokens_step15() public {
+        Terminal.print(0, "Deposit succeeded! And it's done! Now you can vote for propsals.");
+        start();
+    }
 
-    /* ------------------------- ANCHOR Proposal getters ------------------------ */
+
+
+
+
+
+
+
+
+    // /* -------------------------------------------------------------------------- */
+    // /*                              ANCHOR Proposal                               */
+    // /* -------------------------------------------------------------------------- */
+
+    // /* ------------------------- ANCHOR Proposal getters ------------------------ */
 
     function getProposals(uint32 index) public { index;
         delete _proposals;
@@ -209,7 +438,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         //     }
         // }
         MenuItem[] items;
-        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
+        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenu)));
         for (uint i = 0; i < _proposals.length; i++) {
             string str;
             str.append(format('{} {} Proposal - {}.',
@@ -229,12 +458,12 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             Menu.select("Vote for:", "", items);
         } else {
             Terminal.print(0, 'There`re no proposals. Try to create new one.');
-            mainMenu();
+            mainMenu(0);
         }
     }
 
     function voteForProposal(uint32 index) public { index;
-        if(_addrPadawan == address(0)) {
+        if(_padawan == address(0)) {
             attachPadawan();
         } else {
             _proposalAddress = address(0);
@@ -242,8 +471,12 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         }
         // else {
         //     _proposalAddress = address(0);
-        //     getPadawanProposalCb(_addrPadawan);
+        //     getPadawanProposalCb(_padawan);
         // }
+    }
+
+
+    function attachPadawan() public {
     }
 
     address _proposalAddress;
@@ -263,7 +496,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             Terminal.print(0, "You have no votes to vote.");
         }
         items.push(MenuItem("Manage Votes", "", tvm.functionId(menuPadawan)));
-        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
+        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenu)));
         Menu.select("What do you want to do?", "", items);
     }
     function voteForProposal3(uint32 index) public { index;
@@ -282,7 +515,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     }
     function voteForProposal5(uint128 value) public view {
         TvmCell payload = tvm.encodeBody(IPadawan.vote, _proposalAddress, _proposalChoice, uint32(value));
-        optional(uint256) none;
+     
         IMultisig(_multisig).sendTransaction{
             abiVer: 2,
             extMsg: true,
@@ -292,10 +525,10 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             expire: 0,
             callbackId: tvm.functionId(voteForProposal6),
             onErrorId: tvm.functionId(onError)
-        }(_addrPadawan, 1 ton, false, 3, payload);
+        }(_padawan, 1 ton, false, 3, payload);
     }
     function voteForProposal6() public {
-        mainMenu();
+        mainMenu(0);
     }
 
     function printProposal(ProposalInfo proposal) public {
@@ -322,7 +555,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         for (uint i = 0; i < _proposals.length; i++) {
             printProposal(_proposals[i]);
         }
-        mainMenu();
+        mainMenu(0);
     }
 
     function proposalTypeToString(ProposalType proposalType) private pure returns (string) {
@@ -390,7 +623,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     function createReserveProposalSign(bool value) public {
         if(value) {
             TvmCell payload = tvm.encodeBody(ISmvRoot.deployReserveProposal, _newReserveProposal.title, _newReserveProposal.specific);
-            optional(uint256) none;
+         
             IMultisig(_multisig).sendTransaction{
                 abiVer: 2,
                 extMsg: true,
@@ -402,20 +635,20 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
                 onErrorId: tvm.functionId(onError)
             }(_smvRoot, 8 ton, false, 3, payload);
         } else {
-            mainMenu();
+            mainMenu(0);
         }
     }
     function createReserveProposalOnSuccess() public {
         Terminal.print(0, "Proposal created!");
-        mainMenu();
+        mainMenu(0);
     }
 
     function menuPadawan(uint32 index) public { index;
         Terminal.print(0, 'Padawan is your special wallet for voting.');
-        if(_addrPadawan == address(0)) {
+        if(_padawan == address(0)) {
             attachPadawan();
         } else {
-            getPadawan(_addrPadawan);
+            getPadawan(_padawan);
             this.menuPadawan2();
         }
     }
@@ -426,98 +659,30 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         ));
 
         MenuItem[] items;
-        items.push(MenuItem("Update votes info", "", tvm.functionId(menuPadawan)));
-        items.push(MenuItem("Acquire votes", "", tvm.functionId(depositTokens)));
+        // items.push(MenuItem("Update votes info", "", tvm.functionId(menuPadawan)));
+        // items.push(MenuItem("Acquire votes", "", tvm.functionId(depositTokens)));
         if (_padawanVotes.totalVotes != 0) {
             items.push(MenuItem("Reclaim votes", "", tvm.functionId(reclaim)));
         }
-        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenuIndex)));
+        items.push(MenuItem("Back to Main Menu", "", tvm.functionId(mainMenu)));
         Menu.select("What do you want to do?", "", items);
     }
-    function attachPadawan() public {
-        if(_addrPadawan == address(0)) {
-            resolvePadawan();
+
+
+
+    function checkUserTokenWalletExistsPadawan() public {
+        Sdk.getAccountType(tvm.functionId(checkUserTokenWalletExistsPadawanCb), _userTokenWallet);
+    }
+
+    function checkUserTokenWalletExistsPadawanCb(int8 acc_type) public {
+        if (acc_type == -1 || acc_type == 0 || acc_type == 2) {
+            Terminal.print(tvm.functionId(mainMenu), "Sorry, Token Wallet doesn't exist. If you have tokens to claim, please follow 'Claim tokens' item. If not, contact your subgovernance.");
         } else {
-            this.menuPadawan(0);
+            // callTonTokenWalletGetBalance(tvm.functionId(setFromBalance), tvm.functionId(setTip3WalletError));
         }
-    }
-    function resolvePadawan() public view {
-        ISmvRoot(_smvRoot).resolvePadawan{
-            abiVer: 2,
-            extMsg: true,
-            callbackId: tvm.functionId(setPadawanAddress),
-            onErrorId: 0,
-            time: 0,
-            expire: 0,
-            sign: false
-        }(_smvRoot, _multisig);
-    }
-    function setPadawanAddress(address addrPadawan) public {
-        _addrPadawan = addrPadawan;
-        Sdk.getAccountType(tvm.functionId(checkPadawan), addrPadawan);
-    }
-    function checkPadawan(int8 acc_type) public {
-        if(acc_type == 1) {
-            this.menuPadawan(0);
-        } else {
-            Terminal.print(0, 'Padawan doesn`t exist. Creating Padawan...');
-            _addrPadawan = address(0);
-            this.createPadawan(0);
-        }
-    }
-
-    function createPadawan(uint32 index) public view { index;
-        TvmCell payload = tvm.encodeBody(ISmvRoot.deployPadawan, _multisig);
-        optional(uint256) none;
-        IMultisig(_multisig).sendTransaction{
-            abiVer: 2,
-            extMsg: true,
-            sign: true,
-            pubkey: none,
-            time: uint64(now),
-            expire: 0,
-            callbackId: tvm.functionId(resolvePadawan),
-            onErrorId: tvm.functionId(onError)
-        }(_smvRoot, 6 ton, false, 3, payload);
-    }
-
-    function depositTokens(uint32 index) public { index;
-        Terminal.print(0, "To acquire votes you need to deposit tip3 tokens first. Then tokens will be locked and converted to votes.");
-        Terminal.print(0, "You can create a TIP3 wallet in the Main Menu, Get tokens item. If you have forgotten the wallet address, you can restore it using the public key using the same menu item.");
-        AddressInput.get(tvm.functionId(setTip3Wallet), "Enter tip3 wallet address from which you want to deposit tokens:");
-    }
-
-    function setTip3Wallet(address value) public {
-        _userTokenWallet = value;
-        callTonTokenWalletGetBalance(tvm.functionId(setFromBalance), tvm.functionId(setTip3WalletError));
-    }
-    function setFromBalance(
-        uint128 balance
-    ) public {
-        _balanceTIP3 = balance;
-        AmountInput.get(tvm.functionId(transferTokens), "How many tokens to deposit?", 0, 0, _balanceTIP3);
     }
     function setTip3WalletError(uint128 value0) public { value0;
-        Terminal.print(0, "Error! TIP3 wallet does not exist.");
-        this.menuPadawan(0);
-    }
-    function transferTokens(uint128 value) public {
-        // Terminal.print(0, format("DEBUG: transferTokens _addrPadawanTokenWallet {}", _addrPadawanTokenWallet));
-        // Terminal.print(0, format("DEBUG: transferTokens _userTokenWallet {}", _userTokenWallet));
-        this.callTonTokenWalletTransfer(0.15 ton, value, tvm.functionId(depositVotesInfo), 0);
-    }
-    function depositVotesInfo() public {
-        Terminal.print(0, "Transfer succeeded. Now I will convert them to votes.");
-        Terminal.print(tvm.functionId(callDepositVotes), "Sign next message with multisig keys.");
-    }
-    function callDepositVotes() public {
-        TvmCell payload = tvm.encodeBody(IPadawan.depositTokens);
-        callMultisig(payload, _addrPadawan, 1.5 ton, tvm.functionId(onCallDepositVotesSuccess), 0);
-    }
-
-    function onCallDepositVotesSuccess() public {
-        Terminal.print(0, "Deposit succeeded. You will get your votes soon.");
-        menuPadawan(0);
+        Terminal.print(tvm.functionId(mainMenu), "Sorry, Token Wallet doesn't exist. If you have tokens to claim, please follow 'Claim tokens' item. If not, contact your subgovernance.");
     }
 
     /* -------------------------------------------------------------------------- */
@@ -550,7 +715,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
 
     function callReclaim() public {
         TvmCell payload = tvm.encodeBody(IPadawan.reclaimDeposit, _reclaimAmount, _reclaimAddress);
-        callMultisig(payload, _addrPadawan, 3 ton, tvm.functionId(onCallReclaimSuccess), 0);
+        callMultisig(payload, _padawan, 3 ton, tvm.functionId(onCallReclaimSuccess), 0);
     }
 
     function onCallReclaimSuccess() public {
@@ -581,7 +746,6 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         uint32 successCallbackId,
         uint32 errorCallbackId
     ) public view {
-        optional(uint256) none = 0;
         uint32 _errorCallbackId = errorCallbackId == 0 ? tvm.functionId(onError) : errorCallbackId;
         IMultisig(_multisig).sendTransaction{
             abiVer: 2,
@@ -595,6 +759,18 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         }(addr, value, true, 1, payload);
     }
 
+    function attachPubkey(uint256 value) public {
+        if(value == 0) {
+            Terminal.print(0, 'Default Pubkey is not found.');
+        } else {
+            savePubkey(value);
+        }
+    }
+
+    function savePubkey(uint256 value) public {
+        _pubkey = value;
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                            ANCHOR TonTokenWallet                           */
     /* -------------------------------------------------------------------------- */
@@ -603,7 +779,6 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         uint32 successCallbackId,
         uint32 errorCallbackId
     ) public view {
-        optional(uint256) none;
         ITokenWallet(_userTokenWallet).getBalance{
             abiVer: 2,
             extMsg: true,
@@ -622,7 +797,6 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         uint32 successCallbackId,
         uint32 errorCallbackId
     ) public {
-        optional(uint256) none = 0;
         uint32 _errorCallbackId = errorCallbackId == 0 ? tvm.functionId(onError) : errorCallbackId;
         ITokenWallet(_userTokenWallet).transfer{
             abiVer: 2,
@@ -633,7 +807,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
             time: uint32(now),
             expire: 0,
             pubkey: none
-        }(_addrPadawanTokenWallet, _addrPadawanTokenWallet, tokens, value, false);
+        }(_padawanTokenWallet, _padawanTokenWallet, tokens, value, false);
     }
 
     
@@ -666,7 +840,7 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     
     function setPadawan(TipAccount tipAccount, uint32 reqVotes, uint32 totalVotes, uint32 lockedVotes) public {
         // Terminal.print(0, format("DEBUG: setPadawan tipAccount.addr {}", tipAccount.addr));
-        _addrPadawanTokenWallet = tipAccount.addr;
+        _padawanTokenWallet = tipAccount.addr;
         _padawanVotes.reqVotes = reqVotes;
         _padawanVotes.totalVotes = totalVotes;
         _padawanVotes.lockedVotes = lockedVotes;
@@ -674,11 +848,11 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
     
     function setPadawanProposalCb(TipAccount tipAccount, uint32 reqVotes, uint32 totalVotes, uint32 lockedVotes) public {
         // Terminal.print(0, format("DEBUG: setPadawanProposalCb tipAccount.addr {}", tipAccount.addr));
-        _addrPadawanTokenWallet = tipAccount.addr;
+        _padawanTokenWallet = tipAccount.addr;
         _padawanVotes.reqVotes = reqVotes;
         _padawanVotes.totalVotes = totalVotes;
         _padawanVotes.lockedVotes = lockedVotes;
-        getProposals(0);
+        // getProposals(0);
     }
 
     function onError(uint32 sdkError, uint32 exitCode) public {
@@ -687,28 +861,21 @@ contract DensSmvDebot is Debot, Upgradable, ISmvRootStoreCb {
         } else {
             Terminal.print(0, format("Error! Sdk error {}. Exit code {}.", sdkError, exitCode));
         }
-        mainMenu();
+        mainMenu(0);
     }
 
     /* -------------------------------------------------------------------------- */
     /*                        ANCHOR Debot deploy functions                       */
     /* -------------------------------------------------------------------------- */
 
-    function updateAddr(ContractAddr kind, address addr) external override onlyStore {
-        require(addr != address(0));
-        tvm.accept();
-    }
-
-    function updateCode(ContractCode kind, TvmCell code) external override onlyStore {
-        tvm.accept();
-        if (kind == ContractCode.Proposal) {
-            _codeProposal = code;
-        } else if (kind == ContractCode.Padawan) {
-            _codePadawan = code;
-        }
-    }
-
     function onCodeUpgrade() internal override {
         tvm.resetStorage();
+    }
+
+    function onErrorGetTokensToClaim(uint32 sdkError, uint32 exitCode) public {
+        if(exitCode == 101) {
+            Terminal.print(0, "No DeNS Tokens have been allocated to this wallet yet. Contact your Subgovernance for details.");
+        }
+        mainMenu(0);
     }
 }

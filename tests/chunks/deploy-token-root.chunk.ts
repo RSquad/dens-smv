@@ -7,7 +7,6 @@ import { utf8ToHex } from "@rsquad/ton-utils/dist/convert";
 import { isAddrActive } from "../utils";
 import { expect } from "chai";
 import { EMPTY_ADDRESS } from "@rsquad/ton-utils/dist/constants";
-import * as fs from "fs";
 
 export default async (
   client: TonClient,
@@ -43,8 +42,7 @@ export default async (
     },
   });
 
-  const isSmcTokenRootActive = await isAddrActive(client, smcTokenRoot.address);
-  expect(isSmcTokenRootActive).to.be.true;
+  expect(await isAddrActive(client, smcTokenRoot.address)).to.be.true;
 
   console.log(`TokenRoot deployed: ${smcTokenRoot.address}`);
   console.log(`public: ${smcTokenRoot.keys.public}`);
@@ -57,15 +55,6 @@ export default async (
       wallet_code: codeWallet,
     },
   });
-
-  expect(
-    (await smcTokenRoot.run({ functionName: "getWalletCode" })).value.value0
-  ).to.be.eq(codeWallet);
-
-  fs.writeFileSync(
-    "./creds/token-root-keys",
-    JSON.stringify(smcTokenRoot.keys)
-  );
 
   return { smcTokenRoot };
 };

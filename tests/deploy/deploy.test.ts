@@ -34,10 +34,9 @@ describe("Deploy", () => {
     });
   });
 
-  it("inits Fauset and FaucetDeBot", async () => {
+  it("inits Fauset", async () => {
     const result = await initFaucetChunk(client);
     smcFaucet = result.smcFaucet;
-    smcFaucetDebot = result.smcFaucetDebot;
   });
 
   it("deploys TokenRoot", async () => {
@@ -58,17 +57,6 @@ describe("Deploy", () => {
     await deployFaucetChunk(
       client,
       smcSafeMultisigWallet,
-      smcFaucet,
-      smcTokenRoot,
-      smcFaucetTokenWallet
-    );
-  });
-
-  it("deploys and inits FaucetDeBot", async () => {
-    await deployFaucetDebotChunk(
-      client,
-      smcSafeMultisigWallet,
-      smcFaucetDebot,
       smcFaucet,
       smcTokenRoot,
       smcFaucetTokenWallet
@@ -100,8 +88,8 @@ describe("Deploy", () => {
       smcSafeMultisigWallet,
       smcSmvDebot,
       smcSmvRoot,
-      smcSmvRootStore,
-      smcFaucetDebot
+      smcTokenRoot,
+      smcFaucet
     );
     smcSmvDebot = result.smcSmvDebot;
   });

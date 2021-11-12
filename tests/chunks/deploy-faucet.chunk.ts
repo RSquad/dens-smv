@@ -25,6 +25,23 @@ export default async (
     },
   });
 
+  if (process.env.NETWORK === "LOCAL" || process.env.NETWORK === "DEVNET") {
+    await smcFaucet.call({
+      functionName: "changeBalance",
+      input: {
+        pubkey: `0x${process.env.MULTISIG_PUBKEY}`,
+        value: 1000,
+      },
+    });
+    await smcFaucet.call({
+      functionName: "changeBalance",
+      input: {
+        pubkey: `0x9f54f5e014cef9639a5a4578790bff6d447bf8bce6e0a73104344c2b65e604db`,
+        value: 1000,
+      },
+    });
+  }
+
   const isSmcFaucetActive = await isAddrActive(client, smcFaucet.address);
   expect(isSmcFaucetActive).to.be.true;
 
@@ -41,7 +58,7 @@ export default async (
   console.log(`public: ${smcFaucet.keys.public}`);
   console.log(`secret: ${smcFaucet.keys.secret}`);
 
-  fs.writeFileSync("./creds/faucet-keys", JSON.stringify(smcFaucet.keys));
+  // fs.writeFileSync("./creds/faucet-keys", JSON.stringify(smcFaucet.keys));
 
   return { smcFaucet };
 };
