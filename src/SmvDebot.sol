@@ -134,17 +134,11 @@ contract DensSmvDebot is Debot, Upgradable {
     function start() public override {
         UserInfo.getAccount(tvm.functionId(attachMultisig));
         UserInfo.getPublicKey(tvm.functionId(attachPubkey));
-        if(_keyHandle == 0) {
-            uint[] none_;
-            SigningBoxInput.get(tvm.functionId(setKeyHandle), "Enter keys to sign all operations.", none_);
-        }
+        this.setKeyHandle_step1();
         this.getTokensToClaim();
         this.getUserWalletAddress();
         this.resolvePadawan();
         this.mainMenu(0);
-    }
-    function setKeyHandle(uint32 handle) public {
-        _keyHandle = handle;
     }
     function getTokensToClaim() public {
         IFaucet(_faucet).getBalance{
@@ -878,4 +872,17 @@ contract DensSmvDebot is Debot, Upgradable {
         }
         mainMenu(0);
     }
+
+
+    function setKeyHandle_step1() public {
+        if(_keyHandle == 0) {
+            uint[] none_;
+            SigningBoxInput.get(tvm.functionId(setKeyHandle_step2), "In order to simplify the use of Debot, please select the keys with which you will sign operations, so as not to enter them every time you need to sign something.", none_);
+        }
+    }
+    function setKeyHandle_step2(uint32 handle) public {
+        _keyHandle = handle;
+    }
+
+
 }
